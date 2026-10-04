@@ -34,3 +34,10 @@ class PopulationSize:
                 raise ValueError("fraction must be in (0, 1]")
             return max(1, round(self.reference_people * self.fraction))
         raise ValueError("mode must be 'fixed', 'fraction', or 'full'")
+
+    def expansion_factor(self) -> float:
+        """Return how many reference people one simulated person represents."""
+        if self.mode == "fraction":
+            target = self.resolve()
+            return self.reference_people / target
+        return 1.0

@@ -15,9 +15,13 @@ def generate_population(world: World, target_people: Union[int, PopulationSize])
     user's choice explicit: fixed count, fraction of a reference population,
     or the full reference population.
     """
-    target = target_people.resolve() if isinstance(target_people, PopulationSize) else target_people
-    if target <= 0:
-        raise ValueError("target_people must be positive")
+    population_size = (
+        target_people
+        if isinstance(target_people, PopulationSize)
+        else PopulationSize(mode="fixed", people=target_people)
+    )
+    target = population_size.resolve()
+    weight = population_size.expansion_factor()
 
     rng: random.Random = world.rng
     next_person = max(world.people, default=0) + 1
@@ -25,8 +29,15 @@ def generate_population(world: World, target_people: Union[int, PopulationSize])
     created = 0
 
     while created < target:
-        size = min(max(1, int(round(rng.triangular(1, 5, 2.5))),), target - created)
-        household = Household(household_id=next_household, location_id=1, housing_cost=0.0)
+        size = min(
+            max(1, int(round(rng.triangular(1, 5, 2.5)))),
+            target - created,
+        )
+        household = Household(
+            household_id=next_household,
+            location_id=1,
+            housing_cost=0.0,
+        )
         for _ in range(size):
             age = int(rng.triangular(0, 90, 34))
             person = Person(
@@ -37,6 +48,7 @@ def generate_population(world: World, target_people: Union[int, PopulationSize])
                 household_id=next_household,
                 education_years=max(0, min(20, rng.gauss(11, 3))),
                 health=max(0.0, min(1.0, rng.gauss(0.8, 0.12))),
+                population_weight=weight,
             )
             world.people[next_person] = person
             household.member_ids.append(next_person)
