@@ -1,12 +1,10 @@
 """Experiment configuration and explicit counterfactual interventions."""
 from dataclasses import dataclass, field
-from typing import Dict, List, Mapping, Optional
+from typing import Dict, List, Mapping, Optional, Any
 
 
 @dataclass(frozen=True)
 class Intervention:
-    """A named change applied at an absolute simulation year."""
-
     year: int
     kind: str
     parameters: Mapping[str, float] = field(default_factory=dict)
@@ -30,6 +28,7 @@ class ExperimentConfig:
     seed: int = 42
     snapshot_interval_years: int = 1
     interventions: tuple[Intervention, ...] = ()
+    life_course_parameters: Optional[Any] = None
 
     def validate(self) -> None:
         if self.start_year < 0:

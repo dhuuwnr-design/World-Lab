@@ -1,8 +1,7 @@
 """WORLD LAB core state and deterministic simulation loop."""
-
 from dataclasses import dataclass, field
 import random
-from typing import Dict
+from typing import Any, Dict, Optional
 
 from .entities import Household, Location, Organization, Person
 from .events import EventQueue
@@ -19,6 +18,7 @@ class World:
     households: Dict[int, Household] = field(default_factory=dict)
     organizations: Dict[int, Organization] = field(default_factory=dict)
     locations: Dict[int, Location] = field(default_factory=dict)
+    life_course_parameters: Optional[Any] = None
 
     def __post_init__(self) -> None:
         self.rng = random.Random(self.seed)
@@ -50,8 +50,6 @@ class World:
             self._annual_processes()
 
     def _dispatch_event(self, event) -> None:
-        # Events execute at their scheduled simulation day, not at the final
-        # target day of a large advance_days() call.
         previous_day = self.day
         self.day = event.day
         try:
@@ -60,17 +58,24 @@ class World:
             self.day = previous_day
 
     def _annual_processes(self) -> None:
-        for person in self.people.values():
-            person.age += 1
+        if self.life_course_parameters is not None:
+            # Local import avoids a core ↔ population module import cycle.
+            from worldlab.population.life_course import advance_one_year
+            advance_one_year(self, self.life_course_parameters)
+        else:
+            # Keep a bare World useful for engine tests without silently
+            # inventing demographic behaviour.
+            for person in self.people.values():
+                person.age += 1
 
     def snapshot(self) -> dict:
         employed = sum(
-            1
-            for p in self.people.values()
-            if 18 <= p.age <= 65 and p.employed
+            1 for person in self.people.values()
+            if 18 <= person.age <= 65 and person.employed
         )
         working_age = sum(
-            1 for p in self.people.values() if 18 <= p.age <= 65
+            1 for person in self.people.values()
+            if 18 <= person.age <= 65
         )
         return {
             "year": self.year,

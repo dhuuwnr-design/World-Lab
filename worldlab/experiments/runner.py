@@ -5,7 +5,6 @@ from worldlab.core.world import World
 from worldlab.experiments.model import ExperimentConfig, ExperimentResult
 from worldlab.population.generator import generate_population
 
-
 InterventionHandler = Callable[[World, object], None]
 
 
@@ -15,7 +14,11 @@ class ExperimentRunner:
 
     def run(self, config: ExperimentConfig) -> ExperimentResult:
         config.validate()
-        world = World(seed=config.seed, start_year=config.start_year)
+        world = World(
+            seed=config.seed,
+            start_year=config.start_year,
+            life_course_parameters=config.life_course_parameters,
+        )
         generate_population(world, config.population)
         result = ExperimentResult(config=config)
 
@@ -25,7 +28,6 @@ class ExperimentRunner:
 
         end_year = config.start_year + config.duration_years
         for year in range(config.start_year, end_year + 1):
-            # Snapshot before interventions: this is the state entering the year.
             if ((year - config.start_year) % config.snapshot_interval_years == 0
                     or year == end_year):
                 result.snapshots.append(world.snapshot())
@@ -40,5 +42,6 @@ class ExperimentRunner:
                 )
 
             if year < end_year:
-                world.advance_days(365)
+                world.advance_days(DAYS_PER_YEAR)
+
         return result
