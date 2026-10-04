@@ -1,8 +1,8 @@
 """Provisional individual labor-market transitions with bounded experiential learning.
 
-The mechanism is intentionally parameterized: empirical country/year evidence can replace
-defaults. Learning is an experimental bridge, not calibrated human behavior.
-""
+Empirical country/year evidence must replace these defaults before calibrated use.
+"""
+
 from dataclasses import dataclass
 import math
 
@@ -60,8 +60,6 @@ def _participation_probability(person, parameters):
         + parameters.household_security_effect * (social - 0.5)
     )
 
-    # If the person has experienced work before, their acquired expectation can
-    # influence future willingness. This uses private knowledge, never world truth.
     key = "outcome:work"
     if person.mind.knowledge.knows(key):
         expected_income = max(0.0, person.mind.estimate(key, 0.0))
@@ -120,7 +118,9 @@ def advance_labor_market(world: World, parameters: LaborParameters) -> None:
             person.unemployment_years = 0.0
             continue
 
-        predicted_income = person.mind.knowledge.estimate("outcome:work", parameters.annual_income_base)
+        predicted_income = person.mind.knowledge.estimate(
+            "outcome:work", parameters.annual_income_base
+        )
 
         if person.employed:
             if world.rng.random() < parameters.unemployment_hazard:
