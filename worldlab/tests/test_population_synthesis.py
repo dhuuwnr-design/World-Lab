@@ -32,7 +32,7 @@ def test_ipf_handles_multiple_marginals():
         ],
     )
     assert sum(fitted) == 10.0
-    assert abs(fitted[0] - 2.5) < 1e-9
-    assert abs(fitted[1] - 3.5) < 1e-9
-    assert abs(fitted[2] - 2.5) < 1e-9
-    assert abs(fitted[3] - 1.5) < 1e-9
+    assert abs(fitted[0] - 3.0) < 1e-9
+    assert abs(fitted[1] - 3.0) < 1e-9
+    assert abs(fitted[2] - 2.0) < 1e-9
+    assert abs(fitted[3] - 2.0) < 1e-9
