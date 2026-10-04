@@ -1,6 +1,8 @@
-"""Shared world-state entities."""
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
+
+from worldlab.social.agent_mind import AgentMind
+
 
 @dataclass
 class Person:
@@ -23,6 +25,8 @@ class Person:
     country_code: str = ""
     culture_profile_id: Optional[str] = None
     social: Optional[Any] = None
+    mind: AgentMind = field(default_factory=AgentMind)
+
 
 @dataclass
 class Household:
@@ -32,6 +36,7 @@ class Household:
     money: float = 0.0
     housing_cost: float = 0.0
 
+
 @dataclass
 class Organization:
     organization_id: int
@@ -40,6 +45,7 @@ class Organization:
     employees: List[int] = field(default_factory=list)
     cash: float = 0.0
     capacity: float = 0.0
+
 
 @dataclass
 class Location:
