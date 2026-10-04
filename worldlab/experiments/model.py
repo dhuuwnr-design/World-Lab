@@ -4,8 +4,14 @@ from typing import Any, Dict, List, Optional
 @dataclass(frozen=True)
 class Intervention:
     year: int
-    name: str
+    name: str = "intervention"
     payload: Dict[str, Any] = field(default_factory=dict)
+    kind: Optional[str] = None
+
+    def __post_init__(self):
+        # Preserve the older public API where callers used kind="...".
+        if self.kind is not None and self.name == "intervention":
+            object.__setattr__(self, "name", self.kind)
 
 @dataclass(frozen=True)
 class ExperimentConfig:
