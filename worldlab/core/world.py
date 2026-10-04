@@ -19,6 +19,7 @@ class World:
     culture_profiles: Mapping[str, Any] = field(default_factory=dict)
     social_network: Optional[Any] = None
     economic_parameters: Optional[Any] = None
+    labor_parameters: Optional[Any] = None
 
     def __post_init__(self):
         self.rng = random.Random(self.seed)
@@ -61,6 +62,9 @@ class World:
         else:
             for person in self.people.values():
                 person.age += 1
+        if self.labor_parameters is not None:
+            from worldlab.economy.labor import advance_labor_market
+            advance_labor_market(self, self.labor_parameters)
         if self.economic_parameters is not None:
             from worldlab.economy.household import advance_household_economy
             advance_household_economy(self, self.economic_parameters)
@@ -71,22 +75,24 @@ class World:
             self.social_network.annual_update(self)
 
     def snapshot(self):
-        employed = sum(1 for p in self.people.values() if 18 <= p.age <= 65 and p.employed)
-        working = sum(1 for p in self.people.values() if 18 <= p.age <= 65)
-        social = [p for p in self.people.values() if getattr(p, "social", None) is not None]
-        mean = lambda name: sum(getattr(p.social, name) for p in social) / len(social) if social else None
+        labor_force = sum(1 for p in self.people.values() if p.labor_force_participation)
+        employed = sum(1 for p in self.people.values() if p.labor_force_participation and p.employed)
+        incomes = [p.income for p in self.people.values() if p.income > 0]
+        social = [p.social for p in self.people.values() if getattr(p, "social", None) is not None]
         total_household_money = sum(h.money for h in self.households.values())
         return {
-            "year": self.year,
-            "day_of_year": self.day_of_year,
-            "absolute_day": self.day,
-            "population": self.population,
-            "households": len(self.households),
+            "year": self.year, "day_of_year": self.day_of_year, "absolute_day": self.day,
+            "population": self.population, "households": len(self.households),
             "organizations": len(self.organizations),
-            "working_age_employment_rate": employed / working if working else 0.0,
+            "labor_force_participation_rate": labor_force / max(1, self.population),
+            "employment_rate": employed / max(1, labor_force),
+            "mean_income": sum(incomes) / len(incomes) if incomes else 0.0,
             "social_ties": len(self.social_network.ties) if self.social_network is not None else 0,
             "total_household_money": total_household_money,
-            "mean_wellbeing": mean("wellbeing"),
-            "mean_stress": mean("stress"),
-            "mean_perceived_respect": mean("perceived_respect"),
+            "mean_wellbeing": _mean_social(social, "wellbeing"),
+            "mean_stress": _mean_social(social, "stress"),
+            "mean_perceived_respect": _mean_social(social, "perceived_respect"),
         }
+
+def _mean_social(states, name):
+    return sum(getattr(s, name) for s in states) / len(states) if states else None
