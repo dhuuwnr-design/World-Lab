@@ -9,7 +9,6 @@ class Intervention:
     kind: Optional[str] = None
 
     def __post_init__(self):
-        # Preserve the older public API where callers used kind="...".
         if self.kind is not None and self.name == "intervention":
             object.__setattr__(self, "name", self.kind)
 
@@ -49,3 +48,10 @@ class ExperimentResult:
     config: ExperimentConfig
     snapshots: List[Dict[str, Any]]
     intervention_log: List[Dict[str, Any]]
+
+    @property
+    def final(self) -> Dict[str, Any]:
+        """Backward-compatible final-state view of the latest snapshot."""
+        if not self.snapshots:
+            return {}
+        return self.snapshots[-1]
