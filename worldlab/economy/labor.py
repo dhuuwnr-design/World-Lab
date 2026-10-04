@@ -1,12 +1,14 @@
-"""Provisional individual labour-market transitions.
+"""Provisional individual labor-market transitions with bounded experiential learning.
 
-The mechanism is intentionally parameterised so country/year evidence can replace
-the defaults. It models labour-force participation, employment/unemployment,
-occupation assignment and income; it does not claim globally calibrated behaviour.
-"""
+The mechanism is intentionally parameterized: empirical country/year evidence can replace
+defaults. Learning is an experimental bridge, not calibrated human behavior.
+""
 from dataclasses import dataclass
 import math
+
 from worldlab.core.world import World
+from worldlab.social.learning_decision import Experience, apply_experience
+
 
 @dataclass(frozen=True)
 class LaborParameters:
@@ -21,6 +23,8 @@ class LaborParameters:
     annual_income_base: float = 12000.0
     education_income_effect: float = 0.08
     health_income_effect: float = 0.20
+    learned_work_effect: float = 0.10
+    learning_rate: float = 0.20
 
     def validate(self):
         if not 0 <= self.base_participation <= 1:
@@ -31,24 +35,42 @@ class LaborParameters:
             raise ValueError("reemployment_hazard must be in [0,1]")
         if self.participation_age_min < 0 or self.retirement_age <= self.participation_age_min:
             raise ValueError("invalid labour-force age bounds")
+        if self.learned_work_effect < 0:
+            raise ValueError("learned_work_effect must be non-negative")
+        if not 0 <= self.learning_rate <= 1:
+            raise ValueError("learning_rate must be in [0,1]")
 
-def _clamp(x: float, lo: float = 0.0, hi: float = 1.0) -> float:
+
+def _clamp(x, lo=0.0, hi=1.0):
     return max(lo, min(hi, x))
 
-def _sigmoid(x: float) -> float:
+
+def _sigmoid(x):
     return 1.0 / (1.0 + math.exp(-max(-30.0, min(30.0, x))))
 
-def _participation_probability(person, parameters) -> float:
+
+def _participation_probability(person, parameters):
     education = max(0.0, person.education_years - 10.0)
     health = _clamp(person.health)
-    security = getattr(getattr(person, "social", None), "status_security", 0.5)
+    social = getattr(getattr(person, "social", None), "status_security", 0.5)
     raw = (
         (parameters.base_participation - 0.5) * 4.0
         + parameters.education_participation_effect * education
         + parameters.health_effect * (health - 0.5)
-        + parameters.household_security_effect * (security - 0.5)
+        + parameters.household_security_effect * (social - 0.5)
     )
+
+    # If the person has experienced work before, their acquired expectation can
+    # influence future willingness. This uses private knowledge, never world truth.
+    key = "outcome:work"
+    if person.mind.knowledge.knows(key):
+        expected_income = max(0.0, person.mind.estimate(key, 0.0))
+        confidence = _clamp(person.mind.knowledge.confidence.get(key, 0.0))
+        normalized = _clamp(expected_income / max(parameters.annual_income_base, 1.0))
+        raw += parameters.learned_work_effect * confidence * (normalized - 0.5)
+
     return _sigmoid(raw)
+
 
 def _assign_occupation(person):
     if person.education_years >= 16:
@@ -60,8 +82,11 @@ def _assign_occupation(person):
     else:
         person.occupation_id = "elementary"
 
-def _income(person, parameters) -> float:
-    education_factor = 1.0 + parameters.education_income_effect * max(0.0, person.education_years - 10.0)
+
+def _income(person, parameters):
+    education_factor = 1.0 + parameters.education_income_effect * max(
+        0.0, person.education_years - 10.0
+    )
     health_factor = 0.75 + parameters.health_income_effect * _clamp(person.health)
     occupation_factor = {
         "professional": 1.8,
@@ -71,8 +96,10 @@ def _income(person, parameters) -> float:
     }.get(person.occupation_id, 0.9)
     return parameters.annual_income_base * education_factor * health_factor * occupation_factor
 
+
 def advance_labor_market(world: World, parameters: LaborParameters) -> None:
     parameters.validate()
+
     for person in world.people.values():
         if person.age < parameters.participation_age_min or person.age >= parameters.retirement_age:
             person.labor_force_participation = False
@@ -93,6 +120,8 @@ def advance_labor_market(world: World, parameters: LaborParameters) -> None:
             person.unemployment_years = 0.0
             continue
 
+        predicted_income = person.mind.knowledge.estimate("outcome:work", parameters.annual_income_base)
+
         if person.employed:
             if world.rng.random() < parameters.unemployment_hazard:
                 person.employed = False
@@ -111,5 +140,10 @@ def advance_labor_market(world: World, parameters: LaborParameters) -> None:
         if person.employed:
             _assign_occupation(person)
             person.income = _income(person, parameters)
+            apply_experience(
+                person.mind,
+                Experience("work", predicted_income, person.income),
+                learning_rate=parameters.learning_rate,
+            )
         else:
             person.income = 0.0
