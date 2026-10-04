@@ -7,6 +7,7 @@ reference these objects rather than creating isolated mini-worlds.
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
+
 @dataclass
 class Person:
     person_id: int
@@ -20,7 +21,8 @@ class Person:
     money: float = 0.0
     health: float = 0.8
     education_years: float = 10.0
-    preferences: Dicct[str, float] = field(default_factory=dict)
+    preferences: Dict[str, float] = field(default_factory=dict)
+
 
 @dataclass
 class Household:
@@ -30,6 +32,7 @@ class Household:
     money: float = 0.0
     housing_cost: float = 0.0
 
+
 @dataclass
 class Organization:
     organization_id: int
@@ -38,6 +41,7 @@ class Organization:
     employees: List[int] = field(default_factory=list)
     cash: float = 0.0
     capacity: float = 0.0
+
 
 @dataclass
 class Location:
