@@ -1,7 +1,15 @@
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
-from worldlab.social.agent_mind import AgentMind
+if TYPE_CHECKING:
+    from worldlab.social.agent_mind import AgentMind
+
+
+def _new_agent_mind():
+    # Lazy import prevents the core entity module from depending on the social
+    # package during import-time initialization.
+    from worldlab.social.agent_mind import AgentMind
+    return AgentMind()
 
 
 @dataclass
@@ -25,7 +33,7 @@ class Person:
     country_code: str = ""
     culture_profile_id: Optional[str] = None
     social: Optional[Any] = None
-    mind: AgentMind = field(default_factory=AgentMind)
+    mind: "AgentMind" = field(default_factory=_new_agent_mind)
 
 
 @dataclass
