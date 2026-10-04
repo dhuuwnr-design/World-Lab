@@ -1,12 +1,6 @@
-"""Shared world-state entities.
-
-The entities are deliberately small and sector-neutral. Sector modules should
-reference these objects rather than creating isolated mini-worlds.
-"""
-
+"""Shared world-state entities."""
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
-
+from typing import Any, Dict, List, Optional
 
 @dataclass
 class Person:
@@ -22,7 +16,9 @@ class Person:
     health: float = 0.8
     education_years: float = 10.0
     preferences: Dict[str, float] = field(default_factory=dict)
-
+    country_code: str = ""
+    culture_profile_id: Optional[str] = None
+    social: Optional[Any] = None
 
 @dataclass
 class Household:
@@ -31,7 +27,6 @@ class Household:
     member_ids: List[int] = field(default_factory=list)
     money: float = 0.0
     housing_cost: float = 0.0
-
 
 @dataclass
 class Organization:
@@ -42,7 +37,6 @@ class Organization:
     cash: float = 0.0
     capacity: float = 0.0
 
-
 @dataclass
 class Location:
     location_id: int
@@ -50,3 +44,5 @@ class Location:
     latitude: float
     longitude: float
     urban: bool = True
+    country_code: str = ""
+    region_code: str = ""
