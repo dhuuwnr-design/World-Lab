@@ -35,7 +35,7 @@ def test_demography_is_parameter_driven():
 
 def test_death_removes_person_from_shared_world_relationships():
     profile = DemographicProfile(
-        mortality=(AgeRate(30, 30, 1.0),),
+        mortality=(AgeRate(31, 31, 1.0),),
         fertility=(),
     )
     world = make_world(profile)
