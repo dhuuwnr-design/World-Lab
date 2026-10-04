@@ -1,23 +1,24 @@
-"""Experiment primitives for reproducible WORLD LAB counterfactuals.
-
-An experiment is a declared scenario, not an opaque one-click prediction.
-Interventions are applied at explicit simulation years and results are recorded
-for comparison.
-"""
+"""Experiment configuration and explicit counterfactual interventions."""
 from dataclasses import dataclass, field
 from typing import Dict, List, Mapping, Optional
 
 
 @dataclass(frozen=True)
 class Intervention:
+    """A named change applied at an absolute simulation year."""
+
     year: int
     kind: str
     parameters: Mapping[str, float] = field(default_factory=dict)
     label: str = ""
 
-    def validate(self) -> None:
+    def validate(self, start_year: int = 0, end_year: Optional[int] = None) -> None:
         if not self.kind.strip():
             raise ValueError("intervention kind is required")
+        if self.year < start_year:
+            raise ValueError("intervention year is before the experiment start")
+        if end_year is not None and self.year > end_year:
+            raise ValueError("intervention year is after the experiment end")
 
 
 @dataclass(frozen=True)
@@ -31,14 +32,17 @@ class ExperimentConfig:
     interventions: tuple[Intervention, ...] = ()
 
     def validate(self) -> None:
+        if self.start_year < 0:
+            raise ValueError("start_year must be non-negative")
         if self.duration_years < 0:
             raise ValueError("duration_years must be non-negative")
         if self.population <= 0:
             raise ValueError("population must be positive")
         if self.snapshot_interval_years <= 0:
             raise ValueError("snapshot_interval_years must be positive")
+        end_year = self.start_year + self.duration_years
         for intervention in self.interventions:
-            intervention.validate()
+            intervention.validate(self.start_year, end_year)
 
 
 @dataclass

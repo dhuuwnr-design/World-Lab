@@ -26,10 +26,24 @@ def test_run_summary_single_run():
     assert summary["median"] == 4 and summary["p05"] == 4 and summary["p95"] == 4
 
 
-def test_invalid_duration_fails_early():
+def test_intervention_year_is_absolute():
+    config = ExperimentConfig(
+        start_year=2030,
+        duration_years=5,
+        interventions=(Intervention(year=2032, kind="shock"),),
+    )
+    config.validate()
+    assert config.interventions[0].year == 2032
+
+
+def test_intervention_outside_window_fails_early():
     try:
-        ExperimentConfig(duration_years=-1).validate()
+        ExperimentConfig(
+            start_year=2030,
+            duration_years=5,
+            interventions=(Intervention(year=2029, kind="shock"),),
+        ).validate()
     except ValueError:
         pass
     else:
-        raise AssertionError("negative duration should fail")
+        raise AssertionError("out-of-window intervention should fail")
