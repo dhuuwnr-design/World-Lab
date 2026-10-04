@@ -1,8 +1,8 @@
 """Causal technology diffusion primitives.
 
-Adoption is gradual and heterogeneous. Awareness, affordability, readiness and
-social exposure remain separate mechanisms so historical episodes can later
-replace these initial scaffolds with calibrated parameters.
+The implementation keeps awareness, affordability, readiness and social exposure
+separate. Social exposure is aggregated by location, avoiding an O(N^2) scan
+when population size grows. Parameters remain provisional until calibrated.
 """
 from dataclasses import dataclass, field
 import math
@@ -56,23 +56,37 @@ class TechnologyDiffusion:
         health = min(max(person.health, 0.0), 1.0)
         return 0.55 * education + 0.45 * health
 
-    def _peer_exposure(self, person: Person, people: Iterable[Person]) -> float:
-        peers = [
-            other for other in people
-            if other.person_id != person.person_id
-            and other.location_id == person.location_id
-        ]
-        if not peers:
-            return 0.0
-        return sum(other.person_id in self.state.adopted for other in peers) / len(peers)
+    def _location_exposure(self, people: Iterable[Person]) -> Dict[int, float]:
+        totals: Dict[int, int] = {}
+        adopters: Dict[int, int] = {}
+        for person in people:
+            location = person.location_id
+            totals[location] = totals.get(location, 0) + 1
+            if person.person_id in self.state.adopted:
+                adopters[location] = adopters.get(location, 0) + 1
+        return {
+            location: adopters.get(location, 0) / count
+            for location, count in totals.items()
+        }
 
     def advance_year(self, world: World) -> None:
         if world.year < self.technology.introduction_year:
             return
 
         people = list(world.people.values())
+        exposure_by_location = self._location_exposure(people)
+        active_ids = {person.person_id for person in people}
+
+        # Remove stale state for people who died or left the modeled population.
+        self.state.awareness = {
+            pid: value for pid, value in self.state.awareness.items() if pid in active_ids
+        }
+        self.state.adopted = {
+            pid: year for pid, year in self.state.adopted.items() if pid in active_ids
+        }
+
         for person in people:
-            exposure = self._peer_exposure(person, people)
+            exposure = exposure_by_location.get(person.location_id, 0.0)
             old_awareness = self.state.awareness.get(person.person_id, 0.0)
             awareness = min(
                 1.0,
@@ -95,7 +109,9 @@ class TechnologyDiffusion:
                 + 0.20 * social
             )
             probability = 1.0 / (1.0 + math.exp(-8.0 * (score - 0.68)))
-            draw = random.Random(world.seed + world.day + person.person_id).random()
+            draw = random.Random(
+                world.seed + world.day + person.person_id
+            ).random()
             if draw < probability:
                 self.state.adopted[person.person_id] = world.year
 
