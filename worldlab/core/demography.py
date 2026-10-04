@@ -78,7 +78,8 @@ def advance_demography(world: "World", profile: DemographicProfile) -> Demograph
     """Advance one demographic year after the birthday process.
 
     Deaths are sampled first. Births are assigned to surviving mothers'
-    existing households, preserving the shared-world household relationship.
+    existing households, preserving the shared-world household relationship
+    and the mother's population representation weight.
     """
 
     profile.validate()
@@ -132,6 +133,7 @@ def advance_demography(world: "World", profile: DemographicProfile) -> Demograph
                 money=0.0,
                 health=1.0,
                 education_years=0.0,
+                population_weight=mother.population_weight,
             )
             world.people[next_person_id] = child
             world.households[mother.household_id].member_ids.append(next_person_id)
