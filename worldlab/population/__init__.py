@@ -1,1 +1,1 @@
-"""Synthetic population generation primitives."""
+"""Synthetic population generation for WORLD LAB."""
