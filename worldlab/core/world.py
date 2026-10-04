@@ -44,18 +44,30 @@ class World:
     def population(self) -> int:
         return len(self.people)
 
+    @property
+    def weighted_population(self) -> float:
+        """Estimated reference-population size represented by this world."""
+        return sum(person.population_weight for person in self.people.values())
+
     def advance_days(self, days: int) -> None:
         if days < 0:
             raise ValueError("days must be non-negative")
 
         target = self.day + days
         old_year_index = self.day // DAYS_PER_YEAR
-        self.events.run_until(target, self._dispatch_event)
-        self.day = target
+        new_year_index = target // DAYS_PER_YEAR
 
-        new_year_index = self.day // DAYS_PER_YEAR
-        for _ in range(old_year_index, new_year_index):
+        for year_index in range(old_year_index + 1, new_year_index + 1):
+            boundary_day = year_index * DAYS_PER_YEAR
+            self.events.run_until(boundary_day - 1, self._dispatch_event)
+            self.day = boundary_day
             self._annual_processes()
+            self.events.run_until(boundary_day, self._dispatch_event)
+
+        if target > new_year_index * DAYS_PER_YEAR:
+            self.events.run_until(target, self._dispatch_event)
+
+        self.day = target
 
     def _dispatch_event(self, event) -> None:
         previous_day = self.day
@@ -93,6 +105,7 @@ class World:
             "day_of_year": self.day_of_year,
             "absolute_day": self.day,
             "population": self.population,
+            "weighted_population": self.weighted_population,
             "households": len(self.households),
             "organizations": len(self.organizations),
             "working_age_employment_rate": (
