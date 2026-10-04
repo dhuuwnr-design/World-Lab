@@ -1,7 +1,7 @@
 """Reproducible experiment runner with explicit simulation phases."""
 from typing import Callable, Dict, Optional
 
-from worldlab.core.world import World
+from worldlab.core.world import DAYS_PER_YEAR, World
 from worldlab.experiments.model import ExperimentConfig, ExperimentResult
 from worldlab.population.generator import generate_population
 
