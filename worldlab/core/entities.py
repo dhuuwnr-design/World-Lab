@@ -11,10 +11,14 @@ class Person:
     household_id: int
     employed: bool = False
     organization_id: Optional[int] = None
+    occupation_id: Optional[str] = None
     income: float = 0.0
     money: float = 0.0
     health: float = 0.8
     education_years: float = 10.0
+    employment_years: float = 0.0
+    unemployment_years: float = 0.0
+    labor_force_participation: bool = False
     preferences: Dict[str, float] = field(default_factory=dict)
     country_code: str = ""
     culture_profile_id: Optional[str] = None
