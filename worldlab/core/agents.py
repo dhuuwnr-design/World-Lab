@@ -31,6 +31,9 @@ class IndividualAgent:
             if not 0.0 <= value <= 1.0:
                 raise ValueError("agent traits must be between 0 and 1")
 
+    def perceive(self, signals: Mapping[str, float]) -> dict[str, float]:
+        return {key: max(0.0, min(1.0, float(value))) for key, value in signals.items()}
+
     def choose(self, actions: Mapping[str, Mapping[str, float]]) -> str:
         if not actions:
             raise ValueError("at least one action is required")

@@ -78,6 +78,11 @@ class World:
     def _annual_processes(self) -> None:
         for person in self.people.values():
             person.age += 1
+            if person.agent is not None:
+                person.agent.observe(
+                    f"year:{self.year}",
+                    {"wellbeing": person.social_state.wellbeing},
+                )
         self.last_year_births = 0
         self.last_year_deaths = 0
         if self.demographic_profile is not None:
@@ -92,12 +97,21 @@ class World:
         if person is None:
             raise KeyError(f"unknown person_id: {person_id}")
         apply_social_experience(person.social_state, **deltas)
+        if person.agent is not None:
+            person.agent.observe(
+                f"social:{self.day}:{person_id}",
+                {key: getattr(person.social_state, key) for key in (
+                    "wellbeing", "stress", "loneliness", "belonging", "trust"
+                )},
+            )
 
     def snapshot(self) -> dict:
         employed = sum(1 for p in self.people.values() if 18 <= p.age <= 65 and p.employed)
         working_age = sum(1 for p in self.people.values() if 18 <= p.age <= 65)
         social = (
-            weighted_social_aggregate((p.population_weight, p.social_state) for p in self.people.values())
+            weighted_social_aggregate(
+                (p.population_weight, p.social_state) for p in self.people.values()
+            )
             if self.people else {}
         )
         return {
