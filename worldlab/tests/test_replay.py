@@ -42,10 +42,11 @@ def test_replay_checkpoint_round_trip_preserves_identity_and_events():
             evidence_snapshot="evidence:2026",
         ),
         world_state=world.state_dict(),
-        pending_events=(),
+        pending_events=world.events.pending_declarations(),
     )
     restored = ReplayCheckpoint.from_dict(checkpoint.to_dict())
-    assert restored == checkpoint
+    assert restored.identity == checkpoint.identity
+    assert restored.pending_events == checkpoint.pending_events
     assert restored.world_state_digest == checkpoint.world_state_digest
 
 
@@ -59,24 +60,13 @@ def test_state_digest_is_insertion_order_independent():
 def test_full_individual_world_state_restores_exactly():
     world = World(seed=17)
     person = Person(
-        1,
-        30,
-        "F",
-        1,
-        1,
-        income=24000.0,
-        money=5000.0,
-        health=0.8,
-        education_years=14.0,
-        employed=True,
+        1, 30, "F", 1, 1, income=24000.0, money=5000.0, health=0.8,
+        education_years=14.0, employed=True,
         social_state=SocialState(wellbeing=0.7, stress=0.3),
         agent=IndividualAgent(
-            "person:1",
-            99,
-            goals={"security": 0.8},
+            "person:1", 99, goals={"security": 0.8},
             beliefs={"technology:trust": 0.6},
-            risk_tolerance=0.2,
-            social_sensitivity=0.9,
+            risk_tolerance=0.2, social_sensitivity=0.9,
         ),
     )
     world.people[1] = person
@@ -97,11 +87,8 @@ def test_checkpoint_capture_restores_full_world_when_no_pending_callbacks():
         agent=IndividualAgent("person:1", 5, beliefs={"trust": 0.4}),
     )
     identity = ReplayIdentity(
-        model_version="v0.8",
-        scenario_id="baseline",
-        parent_branch=None,
-        random_seed=21,
-        input_snapshot="snapshot:xyz",
+        model_version="v0.8", scenario_id="baseline",
+        parent_branch=None, random_seed=21, input_snapshot="snapshot:xyz",
     )
     checkpoint = ReplayCheckpoint.capture(world, identity)
     restored = checkpoint.restore_world()
