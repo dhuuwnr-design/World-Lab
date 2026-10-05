@@ -1,58 +1,35 @@
 # WORLD LAB - Checkpoint
 
 ## Current branch
-- feature/v0.8-presentation-architecture
+- feature/v0.9-social-network-foundation
 
-## Latest verified milestone
-- Commit: 83f9b65656d578d1da26cad6c7c1ecb248841b04
-- GitHub Actions run #148: SUCCESS.
-- 67 tests passed in the preceding failed run before the final replay-fixture correction; the final run #148 is the authoritative CI gate and completed successfully.
-- Replay intervention checkpoints now restore persisted intervention handlers correctly, and the replay regression fixture uses an individual cognitive agent.
+## Latest implementation milestone
+- Main tip before this milestone: 589cb89968bc3ef4465040a6a54af7941a8cfd3d.
+- GitHub Actions run #154 on main: SUCCESS.
+- The v0.8 prototype, deterministic branching/replay, yearly trajectories, individual cognitive agents, intervention exposure/adoption, event provenance and causal-link projections are implemented.
+- This milestone adds the first explicit social-network substrate to generated populations: deterministic household relationship edges and a location-level social context.
 
-## October 13 showable prototype
-- Prototype commit: 7618fca25f278230196632a4e18c2af1eef52970, followed by verified replay/scenario fixes through 83f9b65656d578d1da26cad6c7c1ecb248841b04.
-- prototype/index.html: civilization-observatory style interface.
-- scripts/serve_prototype.py: zero-dependency local HTTP server.
-- The UI can select simulated population size, intervention, population access fraction, and simulation horizon.
-- The server runs the actual WORLD LAB engine, not a fake front-end animation.
-- The demo shows civilization-scale metrics, divergence, individual-agent samples, exposure/adoption counts, declared mechanisms, evidence references, and uncertainty.
-- Prototype README documents local launch.
-
-## Current implementation milestone
-- Individual intelligence architecture is active: generated people receive persistent individual cognitive agents with goals, beliefs, memory, risk tolerance, social sensitivity, perception and decision context.
-- Deterministic replay/checkpointing and branching are active.
-- Intervention definitions, population scopes, exposure/access, agent adoption, effects, beliefs, evidence and uncertainty are persisted.
-- ScenarioSpec binds ScenarioDefinition, intervention, population scope, evidence, uncertainty and deterministic scenario fingerprint.
-- run_scenario creates a baseline branch and intervention branch, advances both to the same horizon, and computes model-output divergence.
-- Presentation contracts and event/causal projections remain available for future UI expansion.
+## What is actually implemented
+- Selectable simulated population sizes in the prototype.
+- Persistent individual agents with goals, beliefs, memory, risk tolerance, social sensitivity and decision context.
+- Deterministic world checkpoints, branching and replay identities.
+- Counterfactual baseline/intervention comparison with yearly divergence trajectory.
+- Explicit intervention exposure/access/adoption records.
+- Explicit event metadata, evidence references and uncertainty.
+- Generated people now have household relationship edges with closeness, trust, support, conflict and contact frequency.
+- A default social context is attached to the generated location.
 
 ## Scientific boundary
-- Intervention outcomes are model outputs, not predictions of the real world.
-- Evidence references and uncertainty remain explicit.
-- Country/class/culture context must influence distributions and institutions, not hard-code personality stereotypes.
-- The individual agent is an artificial decision model, not a claim of consciousness.
-- The October 13 demo must visibly distinguish simulation output from observed evidence.
+Relationship parameters in this milestone are synthetic priors, not country-specific empirical estimates. They are a structural substrate for later calibration and must not be presented as measured real-world relationships.
 
-## Next major build for the October 13 demo
-1. Validate the prototype end-to-end against the actual repository checkout.
-2. Add time-series trajectories instead of only endpoint metrics.
-3. Add branching-futures visualization with baseline vs multiple intervention branches.
-4. Add a stronger People View showing an individual agent's trajectory, decisions and relationships.
-5. Add intervention diffusion through relationships/organizations and repeated time-varying exposure.
-6. Package/deploy a reliable demo URL if the chosen hosting path is stable and free/available.
-7. Re-run CI after every implementation milestone and never mark an unverified state as complete.
-
-## Post-demo scientific build
-1. Calibration against real historical trajectories.
-2. Geography, migration, labor, health, education, institutions, media and environmental feedback loops.
-3. Scale/performance architecture for much larger populations.
-4. Held-out validation, sensitivity analysis and reproducible experiment bundles.
-5. Civilization-scale presentation: planet -> country -> city -> household -> person -> relationship -> causal chain -> branching future.
+## Next major build
+1. Make social relationships dynamically influence individual perception and intervention diffusion.
+2. Add non-household ties (workplace, education, community) using explicit institution structures.
+3. Add country/region calibration records and geography rather than assigning personality stereotypes by country.
+4. Add time-series People View with decisions, relationships and social-state changes.
+5. Expand intervention diffusion from one-time exposure to repeated, relationship-mediated exposure.
+6. Validate the prototype end-to-end and keep CI green after every milestone.
 
 ## Progress estimate
-- Current engineering direction: approximately 38% of the eventual WORLD LAB vision.
-- October 13 target: a genuinely showable, interactive prototype proving individual-agent simulation, counterfactual experimentation, deterministic branching, measurable divergence and scientific provenance.
-- Full target: calibrated civilization-scale world model, broad coupled systems, large-scale performance, historical validation, mature branching/replay, and the civilization-observatory presentation layer.
-
-## Continue rule
-On Continue, inspect this checkpoint and the repository tip, verify the latest CI result, then continue the next major build. For the October 13 milestone, prioritize actual demo quality and end-to-end reliability over adding disconnected research features. Do not stop at trivial corrections or invent unverified project state.
+- Current engineering direction: approximately 40% of the eventual WORLD LAB vision.
+- This is an engineering estimate, not a scientific accuracy score.
