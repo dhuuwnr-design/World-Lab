@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from .entities import Affiliation, Organization
+from .social import Relationship
 
 if TYPE_CHECKING:
     from .world import World
