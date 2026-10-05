@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 import random
 from typing import Dict, Optional
 
+from .agents import DecisionContext, IndividualAgent
 from .demography import DemographicProfile, advance_demography
 from .entities import Household, Location, Organization, Person
 from .events import EventQueue
@@ -51,6 +52,107 @@ class World:
     def weighted_population(self) -> float:
         return sum(person.population_weight for person in self.people.values())
 
+    @staticmethod
+    def _saturating(value: float, scale: float) -> float:
+        if value <= 0.0:
+            return 0.0
+        return value / (value + scale)
+
+    def perception_for(self, person_id: int) -> dict[str, float]:
+        """Build a provisional bounded perception from currently simulated state.
+
+        These transforms are mechanics for the agent interface, not calibrated
+        claims about human psychology. Calibration belongs in the evidence layer.
+        """
+        person = self.people.get(person_id)
+        if person is None:
+            raise KeyError(f"unknown person_id: {person_id}")
+
+        household = self.households.get(person.household_id)
+        organization = (
+            self.organizations.get(person.organization_id)
+            if person.organization_id is not None
+            else None
+        )
+        location = self.locations.get(person.location_id)
+        social_context = self.social_contexts.get(person.location_id)
+
+        household_resources = 0.0
+        housing_pressure = 0.0
+        if household is not None:
+            household_resources = self._saturating(
+                household.money,
+                10000.0,
+            )
+            housing_pressure = self._saturating(
+                household.housing_cost,
+                max(1.0, household.money + household.housing_cost),
+            )
+
+        relationship_values = [
+            (relationship.closeness + relationship.trust) / 2.0
+            for (left, right), relationship in self.relationships.items()
+            if left == person_id or right == person_id
+        ]
+        relationship_connection = (
+            sum(relationship_values) / len(relationship_values)
+            if relationship_values
+            else 0.0
+        )
+
+        signals = {
+            "wellbeing": person.social_state.wellbeing,
+            "stress": person.social_state.stress,
+            "loneliness": person.social_state.loneliness,
+            "belonging": person.social_state.belonging,
+            "trust": person.social_state.trust,
+            "health": person.health,
+            "employment": 1.0 if person.employed else 0.0,
+            "education": min(1.0, max(0.0, person.education_years / 20.0)),
+            "income_resources": self._saturating(person.income, 10000.0),
+            "money_resources": self._saturating(person.money, 10000.0),
+            "household_resources": household_resources,
+            "housing_pressure": housing_pressure,
+            "relationship_connection": relationship_connection,
+            "organization_capacity": (
+                self._saturating(organization.capacity, 100.0)
+                if organization is not None
+                else 0.0
+            ),
+            "location_urban": 1.0 if location is not None and location.urban else 0.0,
+        }
+        if social_context is not None:
+            signals.update(
+                {
+                    "institutional_trust": social_context.institutional_trust,
+                    "inequality": social_context.inequality,
+                    "norm_strength": social_context.norm_strength,
+                    "social_support_access": social_context.social_support_access,
+                }
+            )
+        return person.agent.perceive(signals) if person.agent is not None else {
+            key: max(0.0, min(1.0, float(value)))
+            for key, value in signals.items()
+        }
+
+    def decision_context_for(
+        self,
+        person_id: int,
+        *,
+        actions: dict[str, dict[str, float]],
+        reason: str = "",
+    ) -> DecisionContext:
+        person = self.people.get(person_id)
+        if person is None:
+            raise KeyError(f"unknown person_id: {person_id}")
+        if person.agent is None:
+            raise ValueError(f"person {person_id} has no individual agent")
+        return person.agent.perceive_context(
+            self.perception_for(person_id),
+            actions=actions,
+            reason=reason,
+        )
+
     def advance_days(self, days: int) -> None:
         if days < 0:
             raise ValueError("days must be non-negative")
@@ -81,7 +183,7 @@ class World:
             if person.agent is not None:
                 person.agent.observe(
                     f"year:{self.year}",
-                    {"wellbeing": person.social_state.wellbeing},
+                    self.perception_for(person.person_id),
                 )
         self.last_year_births = 0
         self.last_year_deaths = 0

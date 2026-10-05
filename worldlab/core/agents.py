@@ -4,6 +4,29 @@ from dataclasses import dataclass, field
 from typing import Mapping
 
 
+@dataclass(frozen=True)
+class Perception:
+    """A bounded, named view of the world available to one person."""
+
+    signals: Mapping[str, float] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        bounded = {
+            key: max(0.0, min(1.0, float(value)))
+            for key, value in self.signals.items()
+        }
+        object.__setattr__(self, "signals", bounded)
+
+
+@dataclass(frozen=True)
+class DecisionContext:
+    """The information and candidate actions available for one decision."""
+
+    perception: Perception
+    actions: Mapping[str, Mapping[str, float]] = field(default_factory=dict)
+    reason: str = ""
+
+
 @dataclass
 class AgentMemory:
     recent_events: list[str] = field(default_factory=list)
@@ -32,7 +55,20 @@ class IndividualAgent:
                 raise ValueError("agent traits must be between 0 and 1")
 
     def perceive(self, signals: Mapping[str, float]) -> dict[str, float]:
-        return {key: max(0.0, min(1.0, float(value))) for key, value in signals.items()}
+        return Perception(signals).signals.copy()
+
+    def perceive_context(
+        self,
+        signals: Mapping[str, float],
+        *,
+        actions: Mapping[str, Mapping[str, float]] | None = None,
+        reason: str = "",
+    ) -> DecisionContext:
+        return DecisionContext(
+            perception=Perception(signals),
+            actions=actions or {},
+            reason=reason,
+        )
 
     def choose(self, actions: Mapping[str, Mapping[str, float]]) -> str:
         if not actions:
@@ -49,6 +85,9 @@ class IndividualAgent:
             score -= cost + uncertainty * (1.0 - self.risk_tolerance)
             scored.append((score, name))
         return max(scored, key=lambda item: (item[0], item[1]))[1]
+
+    def decide(self, context: DecisionContext) -> str:
+        return self.choose(context.actions)
 
     def observe(self, event_id: str, learning: Mapping[str, float] | None = None) -> None:
         self.memory.remember(event_id)
