@@ -6,8 +6,12 @@ from typing import Dict, Optional
 
 from .agents import DecisionContext, IndividualAgent
 from .demography import DemographicProfile, advance_demography
-from .entities import Household, Location, Organization, Person
+from .entities import Affiliation, Household, Location, Organization, Person
+from .environment import EnvironmentCell, annual_step, perception_signals
+from .geography import GeographyNode
 from .events import EventQueue
+from .lifecycle import advance_life_course
+from .multiplex import add as add_multiplex_relationship, remove_person_layer
 from .social import Relationship, SocialContext, apply_social_experience, weighted_social_aggregate
 
 DAYS_PER_YEAR = 365
@@ -22,7 +26,11 @@ class World:
     households: Dict[int, Household] = field(default_factory=dict)
     organizations: Dict[int, Organization] = field(default_factory=dict)
     locations: Dict[int, Location] = field(default_factory=dict)
+    environment: Dict[int, EnvironmentCell] = field(default_factory=dict)
+    geography: Dict[int, GeographyNode] = field(default_factory=dict)
     relationships: Dict[tuple[int, int], Relationship] = field(default_factory=dict)
+    multiplex_relationships: Dict[tuple[int, int, str], Relationship] = field(default_factory=dict)
+    affiliations: Dict[int, Affiliation] = field(default_factory=dict)
     social_contexts: Dict[int, SocialContext] = field(default_factory=dict)
     demographic_profile: Optional[DemographicProfile] = None
     last_year_births: int = 0
@@ -61,6 +69,95 @@ class World:
             return 0.0
         return value / (value + scale)
 
+    def add_relationship(self, relationship: Relationship) -> None:
+        """Add one contextual relationship without collapsing other layers."""
+        add_multiplex_relationship(self.multiplex_relationships, relationship)
+        key = (relationship.source_id, relationship.target_id)
+        current = self.relationships.get(key)
+        if current is None or current.relationship_type != "household" or relationship.relationship_type == "household":
+            self.relationships[key] = relationship
+
+    def remove_relationship_layer(self, person_id: int, layers: set[str]) -> None:
+        """Remove only selected relationship contexts for one person."""
+        remove_person_layer(self.multiplex_relationships, person_id, layers)
+        for key in list(self.relationships):
+            source, target = key
+            if source != person_id and target != person_id:
+                continue
+            if self.relationships[key].relationship_type in layers:
+                del self.relationships[key]
+        affected = {
+            (source, target)
+            for source, target, _layer in self.multiplex_relationships
+            if source == person_id or target == person_id
+        }
+        for key in affected:
+            candidates = [
+                rel for (source, target, _layer), rel in self.multiplex_relationships.items()
+                if (source, target) == key
+            ]
+            candidates.sort(key=lambda rel: (rel.relationship_type != "household", rel.relationship_type))
+            self.relationships[key] = candidates[0]
+
+    def _ensure_multiplex_graph(self) -> None:
+        """Migrate legacy relationship edges into the multiplex graph once."""
+        if self.multiplex_relationships:
+            return
+        for relationship in self.relationships.values():
+            add_multiplex_relationship(self.multiplex_relationships, relationship)
+
+    def social_influence_for(self, person_id: int, signal: str) -> float:
+        """Calculate bounded peer influence with diminishing returns across layers.
+
+        Multiple contexts with the same neighbor are one social relationship
+        for normalization purposes. Additional layers can strengthen influence,
+        but cannot count the same person repeatedly as independent people.
+        """
+        person = self.people.get(person_id)
+        if person is None:
+            raise KeyError(f"unknown person_id: {person_id}")
+
+        graph = self.multiplex_relationships or {
+            (source, target, relationship.relationship_type): relationship
+            for (source, target), relationship in self.relationships.items()
+        }
+        by_neighbor: dict[int, list[Relationship]] = {}
+        for (source, target, _layer), relationship in sorted(graph.items()):
+            if source == person_id and target in self.people:
+                by_neighbor.setdefault(target, []).append(relationship)
+
+        numerator = denominator = 0.0
+        for target, relationships in sorted(by_neighbor.items()):
+            other = self.people[target]
+            if signal == "adoption":
+                value = other.agent.beliefs.get("adoption", 0.0) if other.agent else 0.0
+            else:
+                if not hasattr(other.social_state, signal):
+                    raise ValueError(f"unknown social signal: {signal}")
+                value = float(getattr(other.social_state, signal))
+                if signal == "affect_valence":
+                    value = (value + 1.0) / 2.0
+
+            layer_ties = []
+            for relationship in relationships:
+                tie = relationship.closeness * relationship.contact_frequency * relationship.trust
+                tie *= 1.0 - 0.5 * relationship.conflict
+                layer_ties.append(max(0.0, min(1.0, tie)))
+
+            # Saturating union: a second context adds influence without
+            # pretending the same neighbor is a second independent person.
+            combined_tie = 1.0
+            for tie in layer_ties:
+                combined_tie *= 1.0 - tie
+            combined_tie = 1.0 - combined_tie
+            numerator += combined_tie * value
+            denominator += combined_tie
+
+        if denominator == 0.0:
+            return 0.0
+        normalized = numerator / denominator
+        return normalized if signal == "adoption" else 2.0 * normalized - 1.0
+
     def perception_for(self, person_id: int) -> dict[str, float]:
         person = self.people.get(person_id)
         if person is None:
@@ -74,6 +171,7 @@ class World:
         )
         location = self.locations.get(person.location_id)
         social_context = self.social_contexts.get(person.location_id)
+        environment = self.environment.get(person.location_id)
 
         household_resources = 0.0
         housing_pressure = 0.0
@@ -109,6 +207,8 @@ class World:
             "household_resources": household_resources,
             "housing_pressure": housing_pressure,
             "relationship_connection": relationship_connection,
+            "peer_belonging": max(0.0, min(1.0, 0.5 + 0.5 * self.social_influence_for(person_id, "belonging"))),
+            "peer_trust": max(0.0, min(1.0, 0.5 + 0.5 * self.social_influence_for(person_id, "trust"))),
             "organization_capacity": (
                 self._saturating(organization.capacity, 100.0)
                 if organization is not None
@@ -116,6 +216,8 @@ class World:
             ),
             "location_urban": 1.0 if location is not None and location.urban else 0.0,
         }
+        if environment is not None:
+            signals.update(perception_signals(environment))
         if social_context is not None:
             signals.update(
                 {
@@ -215,9 +317,42 @@ class World:
         finally:
             self.day = previous_day
 
+    def _annual_environment_processes(self) -> None:
+        """Advance spatial environmental state using local human pressure."""
+        if not self.locations:
+            return
+        population_by_location: dict[int, float] = {}
+        organizations_by_location: dict[int, int] = {}
+        for person in self.people.values():
+            population_by_location[person.location_id] = (
+                population_by_location.get(person.location_id, 0.0) + person.population_weight
+            )
+        for organization in self.organizations.values():
+            organizations_by_location[organization.location_id] = (
+                organizations_by_location.get(organization.location_id, 0) + 1
+            )
+        for location_id, location in sorted(self.locations.items()):
+            cell = self.environment.setdefault(location_id, EnvironmentCell())
+            area = max(0.1, float(location.area_km2))
+            density = population_by_location.get(location_id, 0.0) / area
+            human_pressure = min(1.0, density / 1000.0)
+            built_pressure = min(1.0, organizations_by_location.get(location_id, 0) / 10.0)
+            annual_step(
+                cell,
+                human_pressure=human_pressure,
+                built_pressure=built_pressure,
+            )
+
     def _annual_processes(self) -> None:
+        # Age and let each individual process the social environment once per
+        # simulated year. Social learning is bounded and deterministic; it is
+        # a model mechanism, not an empirical claim about real-world effect size.
         for person in self.people.values():
             person.age += 1
+        self._annual_social_learning()
+        advance_life_course(self)
+        self._annual_environment_processes()
+        for person in self.people.values():
             if person.agent is not None:
                 person.agent.observe(f"year:{self.year}", self.perception_for(person.person_id))
         self.last_year_births = 0
@@ -228,6 +363,25 @@ class World:
             self.last_year_deaths = result.deaths
             self.total_births += result.births
             self.total_deaths += result.deaths
+
+    def _annual_social_learning(self) -> None:
+        """Update individual adoption beliefs from accumulated social exposure."""
+        updates: dict[int, float] = {}
+        for person in sorted(self.people.values(), key=lambda item: item.person_id):
+            if person.agent is None:
+                continue
+            peer_adoption = self.social_influence_for(person.person_id, "adoption")
+            current = float(person.agent.beliefs.get("adoption", 0.0))
+            sensitivity = max(0.0, min(1.0, person.agent.social_sensitivity))
+            # Small yearly learning step prevents instantaneous consensus.
+            learning_rate = 0.08 + 0.17 * sensitivity
+            updates[person.person_id] = current + learning_rate * (peer_adoption - current)
+        for person_id, value in updates.items():
+            person = self.people[person_id]
+            person.agent.observe(
+                f"social-learning:{self.year}:{person_id}",
+                {"adoption": max(0.0, min(1.0, value))},
+            )
 
     def apply_social_experience(self, person_id: int, **deltas: float) -> None:
         person = self.people.get(person_id)
@@ -252,9 +406,16 @@ class World:
             "households": {str(key): asdict(value) for key, value in self.households.items()},
             "organizations": {str(key): asdict(value) for key, value in self.organizations.items()},
             "locations": {str(key): asdict(value) for key, value in self.locations.items()},
+            "environment": {str(key): asdict(value) for key, value in self.environment.items()},
+            "geography": {str(key): asdict(value) for key, value in self.geography.items()},
+            "affiliations": {str(key): asdict(value) for key, value in self.affiliations.items()},
             "relationships": {
                 f"{left}:{right}": asdict(value)
                 for (left, right), value in self.relationships.items()
+            },
+            "multiplex_relationships": {
+                f"{source}:{target}:{layer}": asdict(value)
+                for (source, target, layer), value in self.multiplex_relationships.items()
             },
             "social_contexts": {str(key): asdict(value) for key, value in self.social_contexts.items()},
             "demographic_profile": (
@@ -305,10 +466,20 @@ class World:
         households = {int(key): Household(**raw) for key, raw in state.get("households", {}).items()}
         organizations = {int(key): Organization(**raw) for key, raw in state.get("organizations", {}).items()}
         locations = {int(key): Location(**raw) for key, raw in state.get("locations", {}).items()}
+        environment = {int(key): EnvironmentCell(**raw) for key, raw in state.get("environment", {}).items()}
+        geography = {int(key): GeographyNode(**raw) for key, raw in state.get("geography", {}).items()}
+        affiliations = {int(key): Affiliation(**raw) for key, raw in state.get("affiliations", {}).items()}
         relationships = {}
         for key, raw in state.get("relationships", {}).items():
             left, right = (int(part) for part in key.split(":", 1))
             relationships[(left, right)] = Relationship(**raw)
+        multiplex_relationships = {}
+        for key, raw in state.get("multiplex_relationships", {}).items():
+            left, right, layer = key.split(":", 2)
+            multiplex_relationships[(int(left), int(right), layer)] = Relationship(**raw)
+        if not multiplex_relationships:
+            for relationship in relationships.values():
+                add_multiplex_relationship(multiplex_relationships, relationship)
         social_contexts = {
             int(key): SocialContext(**raw)
             for key, raw in state.get("social_contexts", {}).items()
@@ -333,7 +504,11 @@ class World:
             households=households,
             organizations=organizations,
             locations=locations,
+            environment=environment,
+            geography=geography,
             relationships=relationships,
+            multiplex_relationships=multiplex_relationships,
+            affiliations=affiliations,
             social_contexts=social_contexts,
             demographic_profile=profile,
             last_year_births=int(state.get("last_year_births", 0)),
@@ -345,6 +520,9 @@ class World:
         def as_tuple(value):
             return tuple(as_tuple(item) for item in value) if isinstance(value, list) else value
 
+        for location_id in world.locations:
+            world.environment.setdefault(location_id, EnvironmentCell())
+        world._ensure_multiplex_graph()
         world.rng.setstate(as_tuple(state["rng_state"]))
         from .interventions import InterventionDefinition, InterventionEngine
         world.intervention_engine = InterventionEngine.from_dict(state.get("intervention_engine", {}))

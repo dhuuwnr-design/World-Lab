@@ -1,58 +1,44 @@
 # WORLD LAB - Checkpoint
 
 ## Current branch
-- feature/v0.8-presentation-architecture
+- feature/v0.9-social-network-foundation
 
-## Latest verified milestone
-- Commit: 83f9b65656d578d1da26cad6c7c1ecb248841b04
-- GitHub Actions run #148: SUCCESS.
-- 67 tests passed in the preceding failed run before the final replay-fixture correction; the final run #148 is the authoritative CI gate and completed successfully.
-- Replay intervention checkpoints now restore persisted intervention handlers correctly, and the replay regression fixture uses an individual cognitive agent.
+## Latest implementation milestone
+- Previous verified social-network milestone: 5e2fa3e68abb9f846a918c276958414f0706c669.
+- Current implementation tip: 5ef5e22812ae95a6648fbec32fb2e67c1b146354.
+- GitHub Actions run #154 on main: SUCCESS.
+- The v0.8 prototype, deterministic branching/replay, yearly trajectories, individual cognitive agents, intervention exposure/adoption, event provenance and causal-link projections are implemented.
+- The social-network layer now extends from households into education, workplace and community institutions.
+- Multi-affiliation state is explicitly persisted per person and organization; the missing entity/serialization integration was repaired in commit 95cddbe8100acf88ea5dabf05669ad31f480c5c1.
+- The next architecture step is a true multiplex relationship graph: simultaneous household, education, workplace and community ties are stored independently, while the legacy pair-key map remains a compatibility projection.
+- Institutional affiliations now follow life-course state: education closes after the school/education window, workplace membership tracks employment, and community membership persists; active intervals are preserved.
 
-## October 13 showable prototype
-- Prototype commit: 7618fca25f278230196632a4e18c2af1eef52970, followed by verified replay/scenario fixes through 83f9b65656d578d1da26cad6c7c1ecb248841b04.
-- prototype/index.html: civilization-observatory style interface.
-- scripts/serve_prototype.py: zero-dependency local HTTP server.
-- The UI can select simulated population size, intervention, population access fraction, and simulation horizon.
-- The server runs the actual WORLD LAB engine, not a fake front-end animation.
-- The demo shows civilization-scale metrics, divergence, individual-agent samples, exposure/adoption counts, declared mechanisms, evidence references, and uncertainty.
-- Prototype README documents local launch.
-
-## Current implementation milestone
-- Individual intelligence architecture is active: generated people receive persistent individual cognitive agents with goals, beliefs, memory, risk tolerance, social sensitivity, perception and decision context.
-- Deterministic replay/checkpointing and branching are active.
-- Intervention definitions, population scopes, exposure/access, agent adoption, effects, beliefs, evidence and uncertainty are persisted.
-- ScenarioSpec binds ScenarioDefinition, intervention, population scope, evidence, uncertainty and deterministic scenario fingerprint.
-- run_scenario creates a baseline branch and intervention branch, advances both to the same horizon, and computes model-output divergence.
-- Presentation contracts and event/causal projections remain available for future UI expansion.
+## What is actually implemented
+- Selectable simulated population sizes in the prototype.
+- Persistent individual agents with goals, beliefs, memory, risk tolerance, social sensitivity and decision context.
+- Deterministic world checkpoints, branching and replay identities.
+- Counterfactual baseline/intervention comparison with yearly divergence trajectory.
+- Explicit intervention exposure/access/adoption records.
+- Explicit event metadata, evidence references and uncertainty.
+- Generated people now have household relationship edges with closeness, trust, support, conflict and contact frequency.
+- Generated populations now receive deterministic school, workplace and community organizations with bounded group sizes.
+- Non-household ties use the same explicit relationship mechanics, so institutional peers already affect perception and intervention diffusion.
+- Employment and education assignments are synthetic structural priors used to construct those networks; they are not empirical estimates.
+- A default social context is attached to the generated location.
+- CI validation for commit 84802c8 is currently in progress; local 73-test validation preceded this milestone.
 
 ## Scientific boundary
-- Intervention outcomes are model outputs, not predictions of the real world.
-- Evidence references and uncertainty remain explicit.
-- Country/class/culture context must influence distributions and institutions, not hard-code personality stereotypes.
-- The individual agent is an artificial decision model, not a claim of consciousness.
-- The October 13 demo must visibly distinguish simulation output from observed evidence.
+Relationship parameters in this milestone are synthetic priors, not country-specific empirical estimates. They are a structural substrate for later calibration and must not be presented as measured real-world relationships.
 
-## Next major build for the October 13 demo
-1. Validate the prototype end-to-end against the actual repository checkout.
-2. Add time-series trajectories instead of only endpoint metrics.
-3. Add branching-futures visualization with baseline vs multiple intervention branches.
-4. Add a stronger People View showing an individual agent's trajectory, decisions and relationships.
-5. Add intervention diffusion through relationships/organizations and repeated time-varying exposure.
-6. Package/deploy a reliable demo URL if the chosen hosting path is stable and free/available.
-7. Re-run CI after every implementation milestone and never mark an unverified state as complete.
-
-## Post-demo scientific build
-1. Calibration against real historical trajectories.
-2. Geography, migration, labor, health, education, institutions, media and environmental feedback loops.
-3. Scale/performance architecture for much larger populations.
-4. Held-out validation, sensitivity analysis and reproducible experiment bundles.
-5. Civilization-scale presentation: planet -> country -> city -> household -> person -> relationship -> causal chain -> branching future.
+## Next major build
+1. Validate and extend the multiplex relationship graph across serialization, social influence and life-course rewiring.
+2. Add repeated, time-dependent relationship-mediated exposure and belief diffusion.
+3. Add country/region calibration records and geography rather than assigning personality stereotypes by country.
+4. Complete life-course network transitions: education -> work -> income -> household -> network changes.
+5. Add time-series People View with decisions, relationships and social-state changes.
+6. Validate the showable prototype end-to-end and keep the automated test suite green after every milestone.
 
 ## Progress estimate
-- Current engineering direction: approximately 38% of the eventual WORLD LAB vision.
-- October 13 target: a genuinely showable, interactive prototype proving individual-agent simulation, counterfactual experimentation, deterministic branching, measurable divergence and scientific provenance.
-- Full target: calibrated civilization-scale world model, broad coupled systems, large-scale performance, historical validation, mature branching/replay, and the civilization-observatory presentation layer.
-
-## Continue rule
-On Continue, inspect this checkpoint and the repository tip, verify the latest CI result, then continue the next major build. For the October 13 milestone, prioritize actual demo quality and end-to-end reliability over adding disconnected research features. Do not stop at trivial corrections or invent unverified project state.
+- Local validation before the multiplex change: 79 tests passed; the multiplex change must be revalidated before being treated as verified.
+- Current engineering direction: approximately 48% of the eventual WORLD LAB vision. This remains an engineering estimate, not a scientific accuracy score; CI status must still be checked for the latest push.
+- This is an engineering estimate, not a scientific accuracy score.
