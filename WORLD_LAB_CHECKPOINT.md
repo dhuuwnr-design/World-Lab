@@ -1,42 +1,39 @@
 # WORLD LAB CHECKPOINT
 
-## 2026-10-05 — v0.8 individual intelligence: explicit perception context
+## 2026-10-05 — v0.8 individual intelligence + replay foundation
 
 ### Verified repository state
 - Repository: `dhuuwnr-design/World-Lab`
 - Branch: `feature/v0.8-presentation-architecture`
-- Latest implementation commit: `5dbab2fbd7abc443a58d52effe29aa49155be3c2`
-- Previous implementation: `fc801911dbe7e6e7a6c5e7f6a481866e864ed4e9`
-- CI for `fc801911...`: completed successfully.
-- CI for `5dbab2f...`: in progress when this checkpoint was written; not yet verified green.
+- Latest implementation commit: `863bda6ad317dd6d6b7791cd700ef6a8b2a41a3d`
+- CI for `5dbab2f...`: **success**.
+- CI for `863bda6...`: **in progress** when this checkpoint was written; not yet verified green.
 
 ### Implemented
-- `worldlab/core/agents.py`
-  - Added explicit immutable `Perception` structure.
-  - Added explicit `DecisionContext` structure joining perception, candidate actions and decision reason.
-  - Added `IndividualAgent.perceive_context()` and `IndividualAgent.decide()` while preserving the existing `choose()` API.
-- `worldlab/core/world.py`
-  - Added `World.perception_for(person_id)`.
-  - A person's perception now draws from currently simulated individual, household, relationship, organization, location and social-context state.
-  - Signals are bounded to [0,1] before reaching the individual agent.
-  - Added `World.decision_context_for()` for reproducible structured decisions.
-  - Annual learning now records the richer current perception rather than wellbeing alone.
-- `worldlab/tests/test_agent_perception.py`
-  - Covers bounded perception.
-  - Covers structured decision context.
-  - Covers richer world-to-person perception.
-  - Covers deterministic repeated context construction.
+- Persistent individual agents with explicit `Perception` and `DecisionContext`.
+- Rich individual perception from personal, household, relationship, organization, location and social-context state.
+- Callback-free `EventDeclaration` objects for deterministic checkpoint/replay representation.
+- Event queue can expose pending and historical declarations without serializing runtime callback functions.
+- `ReplayCheckpoint` stores:
+  - replay identity/model/scenario/seed
+  - JSON-compatible world snapshot
+  - pending event declarations
+  - historical event declarations
+- Stable canonical JSON and SHA-256 state fingerprints.
+- Round-trip tests for replay checkpoints and event declarations.
+- Existing event dispatch behavior remains callback-driven; replay declarations are intentionally data-only and do not infer behavior.
 
 ### Scientific boundary
-The new transforms are interface mechanics, not calibrated claims about human psychology. Financial saturation constants and bounded mappings are provisional until evidence/calibration work assigns justified parameters. Country, class, culture, institutions, relationships and life history remain contextual mechanisms rather than deterministic personality stereotypes.
+The replay layer currently records reproducible state identity and declared event semantics; it does **not** yet claim that a complete WORLD LAB simulation can be reconstructed from a checkpoint. Runtime callbacks and full entity/agent serialization still need an explicit restore mechanism. Do not claim full branching/replay until that restore path is implemented and tested.
 
 ### Next implementation target
-1. Verify CI for `5dbab2f...` and fix any regression before proceeding.
-2. Represent action consequences as explicit serializable world events with declared metadata.
-3. Add selective technology/policy exposure by population scope.
-4. Build deterministic serializable world checkpoints and scenario branching/replay.
-5. Compare baseline vs intervention trajectories with uncertainty/provenance.
-6. Keep routine agents lightweight; reserve deeper reasoning for selected agents/experiments.
+1. Verify CI for `863bda6...`.
+2. Add explicit serializable entity/agent/world state and a restore constructor.
+3. Register deterministic event consequence handlers by stable event type instead of serializing callbacks.
+4. Implement branch creation from a checkpoint at a divergence day.
+5. Add selective technology/policy exposure to chosen people/population scopes.
+6. Run baseline and intervention branches for multiple years and compare trajectories with uncertainty/provenance.
+7. Preserve lightweight routine agents and selective deeper reasoning.
 
-### Long-term WORLD LAB direction
-Each simulated person remains an individual decision-maker with persistent memory, beliefs, goals, constraints and social context. The simulation should produce multi-year and multi-generation outcomes from interacting individuals and institutions, rather than directly assigning population-level outcomes.
+### Long-term direction
+WORLD LAB is being built as an evidence-grounded experimental world model where individual decisions, relationships, institutions, technology and demography interact over years and generations. It must remain reproducible and explicit about assumptions and uncertainty rather than pretending to be a literal copy of human consciousness or the real world.
