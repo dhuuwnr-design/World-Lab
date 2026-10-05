@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 import hashlib
-from typing import Mapping, Sequence
+from typing import Mapping
 
 from .world import World
 
@@ -35,22 +35,12 @@ class PopulationScope:
                 raise ValueError(f"{name} must contain non-negative IDs")
 
     def matches(self, person, *, seed: int) -> bool:
-        explicit = any(
-            (
-                self.person_ids,
-                self.household_ids,
-                self.location_ids,
-                self.organization_ids,
-            )
-        )
+        explicit = any((self.person_ids, self.household_ids, self.location_ids, self.organization_ids))
         selected = (
             (not self.person_ids or person.person_id in self.person_ids)
             and (not self.household_ids or person.household_id in self.household_ids)
             and (not self.location_ids or person.location_id in self.location_ids)
-            and (
-                not self.organization_ids
-                or person.organization_id in self.organization_ids
-            )
+            and (not self.organization_ids or person.organization_id in self.organization_ids)
         )
         if explicit and not selected:
             return False
@@ -85,9 +75,7 @@ class InterventionDefinition:
             raise ValueError("intervention_id must not be empty")
         if not self.name.strip() or not self.mechanism_id.strip():
             raise ValueError("name and mechanism_id must not be empty")
-        if self.start_day < 0 or (
-            self.end_day is not None and self.end_day < self.start_day
-        ):
+        if self.start_day < 0 or (self.end_day is not None and self.end_day < self.start_day):
             raise ValueError("intervention days are invalid")
         for value, name in (
             (self.exposure_fraction, "exposure_fraction"),
@@ -101,15 +89,7 @@ class InterventionDefinition:
                 raise ValueError(f"{name} must be between 0 and 1")
         if any(not ref.strip() for ref in self.evidence_references):
             raise ValueError("evidence_references must not contain empty values")
-        blocked = {
-            "person_id",
-            "age",
-            "sex",
-            "location_id",
-            "household_id",
-            "organization_id",
-            "agent",
-        }
+        blocked = {"person_id", "age", "sex", "location_id", "household_id", "organization_id", "agent"}
         if blocked.intersection(self.person_effects):
             raise ValueError("person_effects cannot mutate identity or agent fields")
 
@@ -142,13 +122,7 @@ class InterventionEngine:
             if intervention.scope.matches(person, seed=self.seed)
         ]
 
-    def apply(
-        self,
-        world: World,
-        intervention: InterventionDefinition,
-        *,
-        day: int | None = None,
-    ) -> tuple[ExposureRecord, ...]:
+    def apply(self, world: World, intervention: InterventionDefinition, *, day: int | None = None) -> tuple[ExposureRecord, ...]:
         current_day = world.day if day is None else day
         if current_day < intervention.start_day:
             raise ValueError("intervention has not started")
@@ -171,19 +145,8 @@ class InterventionEngine:
                             raise TypeError(f"person effect requires numeric field: {field_name}")
                         setattr(person, field_name, current + float(delta))
                     if person.agent is not None:
-                        person.agent.observe(
-                            f"intervention:{intervention.intervention_id}",
-                            intervention.belief_updates,
-                        )
-            batch.append(
-                ExposureRecord(
-                    intervention.intervention_id,
-                    person.person_id,
-                    status,
-                    current_day,
-                    intervention.mechanism_id,
-                )
-            )
+                        person.agent.observe(f"intervention:{intervention.intervention_id}", intervention.belief_updates)
+            batch.append(ExposureRecord(intervention.intervention_id, person.person_id, status, current_day, intervention.mechanism_id))
         self.records.extend(batch)
         return tuple(batch)
 
@@ -193,19 +156,14 @@ class InterventionEngine:
             return "declined"
         context = world.decision_context_for(
             person_id,
-            {
+            actions={
                 "adopt": {
                     "benefit": intervention.adoption_benefit,
                     "cost": intervention.adoption_cost,
                     "uncertainty": intervention.adoption_uncertainty,
                     "social_effect": intervention.adoption_social_effect,
                 },
-                "wait": {
-                    "benefit": 0.0,
-                    "cost": 0.0,
-                    "uncertainty": 0.0,
-                    "social_effect": 0.0,
-                },
+                "wait": {"benefit": 0.0, "cost": 0.0, "uncertainty": 0.0, "social_effect": 0.0},
             },
             reason=f"intervention:{intervention.intervention_id}",
         )
@@ -215,13 +173,7 @@ class InterventionEngine:
         return {
             "seed": self.seed,
             "records": [
-                {
-                    "intervention_id": r.intervention_id,
-                    "person_id": r.person_id,
-                    "status": r.status,
-                    "day": r.day,
-                    "mechanism_id": r.mechanism_id,
-                }
+                {"intervention_id": r.intervention_id, "person_id": r.person_id, "status": r.status, "day": r.day, "mechanism_id": r.mechanism_id}
                 for r in self.records
             ],
         }
