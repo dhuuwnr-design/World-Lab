@@ -8,6 +8,7 @@ from .agents import DecisionContext, IndividualAgent
 from .demography import DemographicProfile, advance_demography
 from .entities import Household, Location, Organization, Person
 from .events import EventQueue
+from .lifecycle import advance_life_course
 from .social import Relationship, SocialContext, apply_social_experience, weighted_social_aggregate
 
 DAYS_PER_YEAR = 365
@@ -253,6 +254,7 @@ class World:
         for person in self.people.values():
             person.age += 1
         self._annual_social_learning()
+        advance_life_course(self)
         for person in self.people.values():
             if person.agent is not None:
                 person.agent.observe(f"year:{self.year}", self.perception_for(person.person_id))

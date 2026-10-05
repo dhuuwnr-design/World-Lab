@@ -5,7 +5,7 @@
 
 ## Latest implementation milestone
 - Previous verified social-network milestone: 5e2fa3e68abb9f846a918c276958414f0706c669.
-- Current implementation tip: ade4ed415e3008bfc85568c6eca468df4ffa37e9.
+- Current implementation tip: 84802c8be6180c162689c2fb3cb8f8018bc77975.
 - GitHub Actions run #154 on main: SUCCESS.
 - The v0.8 prototype, deterministic branching/replay, yearly trajectories, individual cognitive agents, intervention exposure/adoption, event provenance and causal-link projections are implemented.
 - The social-network layer now extends from households into education, workplace and community institutions.
@@ -22,7 +22,7 @@
 - Non-household ties use the same explicit relationship mechanics, so institutional peers already affect perception and intervention diffusion.
 - Employment and education assignments are synthetic structural priors used to construct those networks; they are not empirical estimates.
 - A default social context is attached to the generated location.
-- Clean checkout validation before this milestone: 73 tests passed (`python -m pytest -q`).
+- CI validation for commit 84802c8 is currently in progress; local 73-test validation preceded this milestone.
 
 ## Scientific boundary
 Relationship parameters in this milestone are synthetic priors, not country-specific empirical estimates. They are a structural substrate for later calibration and must not be presented as measured real-world relationships.
