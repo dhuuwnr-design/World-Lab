@@ -88,3 +88,24 @@ def test_affiliations_follow_life_stage():
     _sync_institutional_affiliations(world)
     assert all(world.affiliations[aid].active_to_day == world.day for aid in education_ids)
     assert any(world.organizations[a.organization_id].sector == "community" and a.active_to_day is None for a in (world.affiliations[aid] for aid in person.affiliation_ids))
+
+def test_affiliation_change_rewires_institutional_relationships():
+    world = World(seed=28)
+    generate_population(world, 80)
+    person = next(p for p in world.people.values() if p.affiliation_ids)
+    old_org = world.affiliations[person.affiliation_ids[0]].organization_id
+    old_sector = world.organizations[old_org].sector
+    old_targets = {
+        target for (source, target), relationship in world.relationships.items()
+        if source == person.person_id and relationship.relationship_type == old_sector
+    }
+    person.age = 23
+    person.employed = False
+    from worldlab.core.lifecycle import _sync_institutional_affiliations
+    _sync_institutional_affiliations(world)
+    if old_sector == "education":
+        new_targets = {
+            target for (source, target), relationship in world.relationships.items()
+            if source == person.person_id and relationship.relationship_type == "education"
+        }
+        assert new_targets != old_targets or not new_targets

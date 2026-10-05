@@ -37,6 +37,57 @@ def _new_organization(world: "World", sector: str, location_id: int) -> Organiza
     return organization
 
 
+
+def _rewire_institution_relationships(world: "World", person_id: int) -> None:
+    """Rebuild the person's non-household institutional ties from active memberships.
+
+    The current kernel stores one directed relationship per ordered pair, so when
+    several institutions connect the same two people the strongest/latest
+    institutional tie is retained. A future multiplex relationship layer should
+    preserve all simultaneous contexts.
+    """
+    person = world.people[person_id]
+    active_orgs = {
+        world.affiliations[aid].organization_id
+        for aid in person.affiliation_ids
+        if aid in world.affiliations and world.affiliations[aid].active_to_day is None
+    }
+
+    institution_members: dict[str, set[int]] = {}
+    for organization_id in active_orgs:
+        organization = world.organizations.get(organization_id)
+        if organization is None:
+            continue
+        institution_members.setdefault(organization.sector, set()).update(
+            member_id for member_id in organization.member_ids if member_id != person_id
+        )
+
+    institutional_types = {"education", "workplace", "community"}
+    for key in list(world.relationships):
+        source, target = key
+        if source != person_id and target != person_id:
+            continue
+        relationship = world.relationships[key]
+        if relationship.relationship_type in institutional_types:
+            del world.relationships[key]
+
+    for sector, members in sorted(institution_members.items()):
+        for other_id in sorted(members):
+            if other_id not in world.people:
+                continue
+            closeness = 0.30
+            trust = 0.35
+            support = 0.30
+            conflict = 0.10
+            contact = 0.45
+            world.relationships[(person_id, other_id)] = Relationship(
+                person_id, other_id, sector, closeness, trust, support, conflict, contact
+            )
+            world.relationships[(other_id, person_id)] = Relationship(
+                other_id, person_id, sector, closeness, trust, support, conflict, contact
+            )
+
+
 def _sync_institutional_affiliations(world: "World") -> None:
     """Keep institutional memberships aligned with each person's current life state."""
     for person in sorted(world.people.values(), key=lambda item: item.person_id):
@@ -79,6 +130,7 @@ def _sync_institutional_affiliations(world: "World") -> None:
         person.organization_id = workplace.organization_id if workplace else (active[0].organization_id if active else None)
         if person.agent is not None:
             person.agent.observe(f"affiliations:{world.year}:{person.person_id}", {"institution_count": float(len(active))})
+        _rewire_institution_relationships(world, person.person_id)
 
 
 def advance_life_course(world: "World") -> None:

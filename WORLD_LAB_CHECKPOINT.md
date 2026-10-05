@@ -38,5 +38,5 @@ Relationship parameters in this milestone are synthetic priors, not country-spec
 
 ## Progress estimate
 - Local validation at the latest tip: 78 tests passed.
-- Current engineering direction: approximately 47% of the eventual WORLD LAB vision. This remains an engineering estimate, not a scientific accuracy score; CI status must still be checked for the latest push.
+- Current engineering direction: approximately 48% of the eventual WORLD LAB vision. This remains an engineering estimate, not a scientific accuracy score; CI status must still be checked for the latest push.
 - This is an engineering estimate, not a scientific accuracy score.
