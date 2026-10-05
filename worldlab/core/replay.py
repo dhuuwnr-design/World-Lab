@@ -86,12 +86,10 @@ class ReplayCheckpoint:
     def restore_world(self, *, event_handlers: Mapping[str, Callable] | None = None) -> World:
         """Restore world state and callback-free event declarations."""
         world = World.from_state_dict(dict(self.world_state))
+        # Rebind handlers that are part of the serialized world lifecycle.
+        world.register_intervention_handlers()
         if self.pending_events or self.history_events:
-            if event_handlers is None:
-                raise ValueError(
-                    "checkpoint contains events; provide stable event_handlers to restore them"
-                )
-            for handler_id, callback in event_handlers.items():
+            for handler_id, callback in (event_handlers or {}).items():
                 world.events.register_handler(handler_id, callback)
             world.events.restore_declarations(self.pending_events, self.history_events)
         return world
