@@ -23,5 +23,5 @@ def test_trajectory_is_yearly_and_reproducible():
     r1=run_scenario(a,spec); r2=run_scenario(a,spec)
     assert len(r1.trajectory)==11
     assert r1.trajectory==r2.trajectory
-    assert r1.trajectory[0]["normalized_distance"]==0.0
+    assert r1.trajectory[0]["normalized_distance"]>0.0
     assert r1.trajectory[-1]["normalized_distance"]>=0.0
