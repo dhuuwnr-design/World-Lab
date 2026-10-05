@@ -9,6 +9,7 @@ from .demography import DemographicProfile, advance_demography
 from .entities import Affiliation, Household, Location, Organization, Person
 from .events import EventQueue
 from .lifecycle import advance_life_course
+from .multiplex import add as add_multiplex_relationship, remove_person_layer
 from .social import Relationship, SocialContext, apply_social_experience, weighted_social_aggregate
 
 DAYS_PER_YEAR = 365
@@ -24,6 +25,7 @@ class World:
     organizations: Dict[int, Organization] = field(default_factory=dict)
     locations: Dict[int, Location] = field(default_factory=dict)
     relationships: Dict[tuple[int, int], Relationship] = field(default_factory=dict)
+    multiplex_relationships: Dict[tuple[int, int, str], Relationship] = field(default_factory=dict)
     affiliations: Dict[int, Affiliation] = field(default_factory=dict)
     social_contexts: Dict[int, SocialContext] = field(default_factory=dict)
     demographic_profile: Optional[DemographicProfile] = None
@@ -63,13 +65,51 @@ class World:
             return 0.0
         return value / (value + scale)
 
+    def add_relationship(self, relationship: Relationship) -> None:
+        """Add one contextual relationship without collapsing other layers."""
+        add_multiplex_relationship(self.multiplex_relationships, relationship)
+        key = (relationship.source_id, relationship.target_id)
+        current = self.relationships.get(key)
+        if current is None or current.relationship_type != "household" or relationship.relationship_type == "household":
+            self.relationships[key] = relationship
+
+    def remove_relationship_layer(self, person_id: int, layers: set[str]) -> None:
+        """Remove only selected relationship contexts for one person."""
+        remove_person_layer(self.multiplex_relationships, person_id, layers)
+        for key in list(self.relationships):
+            source, target = key
+            if source != person_id and target != person_id:
+                continue
+            if self.relationships[key].relationship_type in layers:
+                del self.relationships[key]
+        affected = {
+            (source, target)
+            for source, target, _layer in self.multiplex_relationships
+            if source == person_id or target == person_id
+        }
+        for key in affected:
+            candidates = [
+                rel for (source, target, _layer), rel in self.multiplex_relationships.items()
+                if (source, target) == key
+            ]
+            candidates.sort(key=lambda rel: (rel.relationship_type != "household", rel.relationship_type))
+            self.relationships[key] = candidates[0]
+
+    def _ensure_multiplex_graph(self) -> None:
+        """Migrate legacy relationship edges into the multiplex graph once."""
+        if self.multiplex_relationships:
+            return
+        for relationship in self.relationships.values():
+            add_multiplex_relationship(self.multiplex_relationships, relationship)
+
     def social_influence_for(self, person_id: int, signal: str) -> float:
         """Calculate a bounded peer signal from explicit relationship ties."""
         person = self.people.get(person_id)
         if person is None:
             raise KeyError(f"unknown person_id: {person_id}")
         numerator = denominator = 0.0
-        for (source, target), relationship in sorted(self.relationships.items()):
+        graph = self.multiplex_relationships or {(source, target, relationship.relationship_type): relationship for (source, target), relationship in self.relationships.items()}
+        for (source, target, _layer), relationship in sorted(graph.items()):
             if source != person_id:
                 continue
             other = self.people.get(target)
@@ -315,6 +355,10 @@ class World:
                 f"{left}:{right}": asdict(value)
                 for (left, right), value in self.relationships.items()
             },
+            "multiplex_relationships": {
+                f"{source}:{target}:{layer}": asdict(value)
+                for (source, target, layer), value in self.multiplex_relationships.items()
+            },
             "social_contexts": {str(key): asdict(value) for key, value in self.social_contexts.items()},
             "demographic_profile": (
                 asdict(self.demographic_profile) if self.demographic_profile is not None else None
@@ -369,6 +413,13 @@ class World:
         for key, raw in state.get("relationships", {}).items():
             left, right = (int(part) for part in key.split(":", 1))
             relationships[(left, right)] = Relationship(**raw)
+        multiplex_relationships = {}
+        for key, raw in state.get("multiplex_relationships", {}).items():
+            left, right, layer = key.split(":", 2)
+            multiplex_relationships[(int(left), int(right), layer)] = Relationship(**raw)
+        if not multiplex_relationships:
+            for relationship in relationships.values():
+                add_multiplex_relationship(multiplex_relationships, relationship)
         social_contexts = {
             int(key): SocialContext(**raw)
             for key, raw in state.get("social_contexts", {}).items()
@@ -394,6 +445,7 @@ class World:
             organizations=organizations,
             locations=locations,
             relationships=relationships,
+            multiplex_relationships=multiplex_relationships,
             affiliations=affiliations,
             social_contexts=social_contexts,
             demographic_profile=profile,
@@ -406,6 +458,7 @@ class World:
         def as_tuple(value):
             return tuple(as_tuple(item) for item in value) if isinstance(value, list) else value
 
+        world._ensure_multiplex_graph()
         world.rng.setstate(as_tuple(state["rng_state"]))
         from .interventions import InterventionDefinition, InterventionEngine
         world.intervention_engine = InterventionEngine.from_dict(state.get("intervention_engine", {}))

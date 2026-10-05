@@ -19,29 +19,27 @@ def _create_household_relationships(world: World, member_ids: list[int], rng: ra
             support = clamp((closeness + trust) / 2.0 + rng.gauss(0.0, 0.06))
             conflict = clamp(rng.betavariate(1.5, 7.0))
             contact = clamp(0.55 + 0.35 * closeness + rng.gauss(0.0, 0.05))
-            world.relationships[(source_id, target_id)] = Relationship(source_id, target_id, "household", closeness, trust, support, conflict, contact)
-            world.relationships[(target_id, source_id)] = Relationship(target_id, source_id, "household", closeness, trust, support, conflict, contact)
+            world.add_relationship(Relationship(source_id, target_id, "household", closeness, trust, support, conflict, contact))
+            world.add_relationship(Relationship(target_id, source_id, "household", closeness, trust, support, conflict, contact))
 
 
 def _create_institution_relationships(world: World, member_ids: list[int], institution_type: str, rng: random.Random) -> None:
     """Create deterministic non-household ties for an institution."""
     for index, source_id in enumerate(member_ids):
         for target_id in member_ids[index + 1:]:
-            if (source_id, target_id) in world.relationships:
-                continue
             closeness = clamp(rng.betavariate(3.5, 3.0))
             trust = clamp(rng.betavariate(3.5, 3.0))
             support = clamp((closeness + trust) / 2.0 + rng.gauss(0.0, 0.08))
             conflict = clamp(rng.betavariate(1.2, 8.0))
             contact = clamp(0.25 + 0.55 * closeness + rng.gauss(0.0, 0.07))
-            world.relationships[(source_id, target_id)] = Relationship(
+            world.add_relationship(Relationship(
                 source_id, target_id, institution_type,
                 closeness, trust, support, conflict, contact,
-            )
-            world.relationships[(target_id, source_id)] = Relationship(
+            ))
+            world.add_relationship(Relationship(
                 target_id, source_id, institution_type,
                 closeness, trust, support, conflict, contact,
-            )
+            ))
 
 
 def _create_institutions(world: World, rng: random.Random) -> None:

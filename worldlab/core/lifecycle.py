@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 
 from .entities import Affiliation, Organization
 from .social import Relationship
+from .social import Relationship
 
 if TYPE_CHECKING:
     from .world import World
@@ -64,13 +65,7 @@ def _rewire_institution_relationships(world: "World", person_id: int) -> None:
         )
 
     institutional_types = {"education", "workplace", "community"}
-    for key in list(world.relationships):
-        source, target = key
-        if source != person_id and target != person_id:
-            continue
-        relationship = world.relationships[key]
-        if relationship.relationship_type in institutional_types:
-            del world.relationships[key]
+    world.remove_relationship_layer(person_id, institutional_types)
 
     for sector, members in sorted(institution_members.items()):
         for other_id in sorted(members):
@@ -81,12 +76,12 @@ def _rewire_institution_relationships(world: "World", person_id: int) -> None:
             support = 0.30
             conflict = 0.10
             contact = 0.45
-            world.relationships[(person_id, other_id)] = Relationship(
+            world.add_relationship(Relationship(
                 person_id, other_id, sector, closeness, trust, support, conflict, contact
-            )
-            world.relationships[(other_id, person_id)] = Relationship(
+            ))
+            world.add_relationship(Relationship(
                 other_id, person_id, sector, closeness, trust, support, conflict, contact
-            )
+            ))
 
 
 def _sync_institutional_affiliations(world: "World") -> None:

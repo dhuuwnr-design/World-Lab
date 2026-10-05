@@ -5,11 +5,12 @@
 
 ## Latest implementation milestone
 - Previous verified social-network milestone: 5e2fa3e68abb9f846a918c276958414f0706c669.
-- Current implementation tip: aad80611f086a4644a33f1a9d55719be907c0578.
+- Current implementation tip: 5ef5e22812ae95a6648fbec32fb2e67c1b146354.
 - GitHub Actions run #154 on main: SUCCESS.
 - The v0.8 prototype, deterministic branching/replay, yearly trajectories, individual cognitive agents, intervention exposure/adoption, event provenance and causal-link projections are implemented.
 - The social-network layer now extends from households into education, workplace and community institutions.
 - Multi-affiliation state is explicitly persisted per person and organization; the missing entity/serialization integration was repaired in commit 95cddbe8100acf88ea5dabf05669ad31f480c5c1.
+- The next architecture step is a true multiplex relationship graph: simultaneous household, education, workplace and community ties are stored independently, while the legacy pair-key map remains a compatibility projection.
 - Institutional affiliations now follow life-course state: education closes after the school/education window, workplace membership tracks employment, and community membership persists; active intervals are preserved.
 
 ## What is actually implemented
@@ -30,13 +31,14 @@
 Relationship parameters in this milestone are synthetic priors, not country-specific empirical estimates. They are a structural substrate for later calibration and must not be presented as measured real-world relationships.
 
 ## Next major build
-1. Add repeated, time-dependent relationship-mediated exposure and belief diffusion.\n2. Add explicit multi-affiliation memberships so school, workplace and community networks can change as life stages change.
+1. Validate and extend the multiplex relationship graph across serialization, social influence and life-course rewiring.
+2. Add repeated, time-dependent relationship-mediated exposure and belief diffusion.
 3. Add country/region calibration records and geography rather than assigning personality stereotypes by country.
 4. Complete life-course network transitions: education -> work -> income -> household -> network changes.
 5. Add time-series People View with decisions, relationships and social-state changes.
 6. Validate the showable prototype end-to-end and keep the automated test suite green after every milestone.
 
 ## Progress estimate
-- Local validation at the latest tip: 78 tests passed.
+- Local validation before the multiplex change: 79 tests passed; the multiplex change must be revalidated before being treated as verified.
 - Current engineering direction: approximately 48% of the eventual WORLD LAB vision. This remains an engineering estimate, not a scientific accuracy score; CI status must still be checked for the latest push.
 - This is an engineering estimate, not a scientific accuracy score.
