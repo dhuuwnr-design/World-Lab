@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
+from .agents import IndividualAgent
 from .social import SocialState
 
 
@@ -22,6 +23,7 @@ class Person:
     population_weight: float = 1.0
     social_state: SocialState = field(default_factory=SocialState)
     preferences: Dict[str, float] = field(default_factory=dict)
+    agent: Optional[IndividualAgent] = None
 
 
 @dataclass
