@@ -55,3 +55,32 @@ def test_events_remain_chronological():
 def test_calibration_metric_zero_for_match():
     data = {"population": 1000, "employment": 0.8}
     assert normalized_rmse(data, data) == 0.0
+
+
+def test_life_course_updates_education_and_stage():
+    world = World(seed=31)
+    generate_population(world, 40)
+    before = {pid: (p.age, p.education_years) for pid, p in world.people.items()}
+    world.advance_days(365)
+    for pid, (age, education) in before.items():
+        person = world.people[pid]
+        if 6 <= age <= 21:
+            assert person.education_years >= education
+        assert person.life_stage != "unknown"
+
+
+def test_births_create_full_individual_agents_and_relationships():
+    from worldlab.core.demography import AgeRate, DemographicProfile
+    world = World(
+        seed=32,
+        demographic_profile=DemographicProfile(
+            mortality=(AgeRate(0, 120, 0.0),),
+            fertility=(AgeRate(20, 40, 1.0),),
+        ),
+    )
+    generate_population(world, 10)
+    world.advance_days(365)
+    newborns = [p for p in world.people.values() if p.age == 0]
+    assert newborns
+    assert all(p.agent is not None for p in newborns)
+    assert all(any(key[0] == p.person_id or key[1] == p.person_id for key in world.relationships) for p in newborns)

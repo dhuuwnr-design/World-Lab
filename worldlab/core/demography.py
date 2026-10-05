@@ -8,14 +8,15 @@ rates are embedded here.
 from dataclasses import dataclass
 from typing import Iterable, TYPE_CHECKING
 
+from .agents import IndividualAgent
+from .social import Relationship
+
 if TYPE_CHECKING:
     from .world import World
 
 
 @dataclass(frozen=True)
 class AgeRate:
-    """Annual rate/probability applied to an inclusive age interval."""
-
     age_min: int
     age_max: int
     rate: float
@@ -29,12 +30,6 @@ class AgeRate:
 
 @dataclass(frozen=True)
 class DemographicProfile:
-    """Externally supplied demographic schedules.
-
-    mortality is annual probability of death by age.
-    fertility is expected births per woman-year by age.
-    """
-
     mortality: tuple[AgeRate, ...]
     fertility: tuple[AgeRate, ...]
     female_min_age: int = 15
@@ -75,13 +70,7 @@ class DemographicYearResult:
 
 
 def advance_demography(world: "World", profile: DemographicProfile) -> DemographicYearResult:
-    """Advance one demographic year after the birthday process.
-
-    Deaths are sampled first. Births are assigned to surviving mothers'
-    existing households, preserving the shared-world household relationship
-    and the mother's population representation weight.
-    """
-
+    """Advance one demographic year after the birthday process."""
     profile.validate()
 
     deaths = []
@@ -98,6 +87,8 @@ def advance_demography(world: "World", profile: DemographicProfile) -> Demograph
             organization = world.organizations.get(person.organization_id)
             if organization and person_id in organization.employees:
                 organization.employees.remove(person_id)
+        for key in [key for key in world.relationships if person_id in key]:
+            del world.relationships[key]
 
     for household_id in [
         hid for hid, household in world.households.items() if not household.member_ids
@@ -108,21 +99,18 @@ def advance_demography(world: "World", profile: DemographicProfile) -> Demograph
     births = 0
 
     for mother in list(world.people.values()):
-        if mother.sex != "F":
-            continue
-        if not profile.female_min_age <= mother.age <= profile.female_max_age:
+        if mother.sex != "F" or not profile.female_min_age <= mother.age <= profile.female_max_age:
             continue
 
         expected_births = profile.fertility_rate(mother.age)
         whole_births = int(expected_births)
         fractional_birth = expected_births - whole_births
-        count = whole_births + (
-            1 if world.rng.random() < fractional_birth else 0
-        )
+        count = whole_births + (1 if world.rng.random() < fractional_birth else 0)
 
         for _ in range(count):
+            child_id = next_person_id
             child = type(mother)(
-                person_id=next_person_id,
+                person_id=child_id,
                 age=0,
                 sex="M" if world.rng.random() < profile.male_probability_at_birth else "F",
                 location_id=mother.location_id,
@@ -134,9 +122,28 @@ def advance_demography(world: "World", profile: DemographicProfile) -> Demograph
                 health=1.0,
                 education_years=0.0,
                 population_weight=mother.population_weight,
+                life_stage="early_childhood",
+                agent=IndividualAgent(
+                    agent_id=f"person:{child_id}",
+                    seed=world.rng.randrange(0, 2**63),
+                    goals={"security": world.rng.random(), "connection": world.rng.random(), "growth": world.rng.random()},
+                    beliefs={},
+                    risk_tolerance=world.rng.random(),
+                    social_sensitivity=world.rng.random(),
+                ),
             )
-            world.people[next_person_id] = child
-            world.households[mother.household_id].member_ids.append(next_person_id)
+            world.people[child_id] = child
+            world.households[mother.household_id].member_ids.append(child_id)
+            relationship = Relationship(
+                mother.person_id, child_id, "household",
+                0.9, 0.85, 0.95, 0.05, 0.95,
+            )
+            world.relationships[(mother.person_id, child_id)] = relationship
+            world.relationships[(child_id, mother.person_id)] = Relationship(
+                child_id, mother.person_id, "household",
+                relationship.closeness, relationship.trust, relationship.support,
+                relationship.conflict, relationship.contact_frequency,
+            )
             next_person_id += 1
             births += 1
 

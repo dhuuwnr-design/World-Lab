@@ -21,6 +21,7 @@ class Person:
     health: float = 0.8
     education_years: float = 10.0
     population_weight: float = 1.0
+    life_stage: str = "unknown"
     social_state: SocialState = field(default_factory=SocialState)
     preferences: Dict[str, float] = field(default_factory=dict)
     agent: Optional[IndividualAgent] = None
