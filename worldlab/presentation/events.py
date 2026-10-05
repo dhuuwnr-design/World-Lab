@@ -3,12 +3,16 @@
 from worldlab.core.world import World
 from .contracts import EventRecord
 
+
 def event_records(world: World) -> tuple[EventRecord, ...]:
     return tuple(
         EventRecord(
             event_id=f"event:{item.sequence}",
             simulation_time=item.day,
             event_type=item.name or "scheduled",
+            actor_ids=item.metadata.actor_ids,
+            causes=item.metadata.mechanism_ids,
+            effects=dict(item.metadata.effects),
         )
         for item in world.events.history
     )
