@@ -1,44 +1,34 @@
 # WORLD LAB - Checkpoint
 
 ## Current branch
-- feature/v0.8-presentation-architecture
+- `feature/v0.8-presentation-architecture`
 
 ## Latest verified milestone
-- Commit: ada2e161ec4d32b90177c502d9f8d50371e1b986
-- Message: Add deterministic world branching from checkpoints
-- CI: GitHub Actions run #136 - SUCCESS
-- Verified: 2026-10-05
+- Commit: `2660c41bd5bea94a01d9a85be46ed24748ed1bf4`
+- Deterministic world branching and checkpoint round-trip implemented.
+- CI for branching implementation: SUCCESS (run #136).
 
-## What is implemented
-- Persistent individual cognitive agents attached to simulated people.
-- Individual perception and decision contexts.
-- Annual lived-world learning.
-- Deterministic world state serialization and restoration.
-- Stable event-handler replay restoration.
-- Typed presentation/science contracts.
-- Event metadata and provenance/causal-link projection.
-- Deterministic branching from exact replay checkpoints.
-- Branch isolation and checkpoint round-trip regression tests.
+## Current implementation milestone
+- Intervention & Exposure Engine implemented in commit after this checkpoint.
+- Supports declarative population scopes, deterministic exposure/access sampling, individual-agent adoption decisions, measurable person effects, belief learning, exposure history serialization, and branch-safe application.
 
-## Current architectural meaning
-WORLD LAB can now create an exact world state, preserve its identity, and fork independent histories from that state. This is the foundation for counterfactual civilization experiments.
+## Scientific boundary
+- Intervention outcomes are model outputs, not predictions of the real world.
+- Evidence references and uncertainty are explicit fields.
+- Population sampling does not consume the core world's RNG, preserving reproducibility.
+- Individual agents drive adoption when available; the engine does not encode country/class personality stereotypes.
 
 ## Next major build
-Implement the Intervention and Exposure Engine:
-1. Define interventions, technologies, and policies as explicit mechanisms.
-2. Define configurable population scopes: selected people, households, geography, fractions, and deterministic sampling.
-3. Define exposure, access, and adoption rules over time.
-4. Apply interventions deterministically to a branch without mutating its parent.
-5. Record provenance, evidence, uncertainty, and causal mechanism IDs.
-6. Compare baseline versus intervention branches through measurable divergence.
-7. Test deterministic replay, scope correctness, branch isolation, and long-horizon divergence.
+1. Connect intervention lifecycle to persistent event/replay declarations.
+2. Add baseline-vs-intervention metrics and divergence reports.
+3. Add time-varying exposure/adoption and diffusion through relationships/organizations.
+4. Add scenario contracts and intervention serialization into replay checkpoints.
+5. Expand calibration/validation against real historical trajectories.
 
 ## Progress estimate
-This is an engineering roadmap estimate, not a measured scientific completeness score.
-- Current engine foundation: approximately 25-30% of the eventual WORLD LAB vision.
-- 50% milestone target: a usable civilization experiment core where a user can create a baseline, select a population scope, introduce an intervention, run years or generations, branch alternatives, and inspect explainable measurable divergence with uncertainty and provenance.
-- Full target: the above plus broad calibrated real-world systems, large-scale performance, geography, culture, economics, health, education, institutions, environment, migration feedbacks, validation against historical data, mature branching and replay, and the civilization-scale presentation layer.
-- Percentages must be revised as capabilities become concrete; they must never be presented as proof that the model is a replica of reality.
+- Current: approximately 30% of the eventual WORLD LAB vision.
+- 50% target: usable civilization experiment core with interventions, population selection, individual decisions, multi-year branching, measurable divergence, uncertainty/provenance, and validation gates.
+- Full target: calibrated civilization-scale world model, broad coupled systems, large-scale performance, historical validation, mature branching/replay, and the civilization-observatory presentation layer.
 
 ## Continue rule
-When the user says Continue or Work on World Lab, inspect this checkpoint and the actual repository state first, verify the latest CI, then continue implementation from the next major build. Do not stop at a trivial code correction.
+On `Continue`, inspect this checkpoint and the repository tip, verify the latest CI result, then continue the next major build. Do not stop at trivial corrections or invent unverified project state.
