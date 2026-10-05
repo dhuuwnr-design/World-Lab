@@ -1,0 +1,40 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WORLD LAB — Civilization Observatory</title>
+<style>
+:root{--bg:#07100f;--panel:#0d1917;--line:#21332f;--text:#e9f2ed;--muted:#8da39a;--accent:#9be7b1;--gold:#d8c98b}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 50% 10%,#173029,#07100f 45%,#040807);color:var(--text);font:14px/1.45 system-ui,sans-serif}
+header{padding:26px 5vw 18px;display:flex;justify-content:space-between;align-items:end;border-bottom:1px solid var(--line)}h1{font:500 34px Georgia,serif;margin:0}.eyebrow{color:var(--accent);text-transform:uppercase;letter-spacing:.18em;font-size:10px}.muted{color:var(--muted)}
+main{max-width:1450px;margin:auto;padding:22px 5vw 50px}.grid{display:grid;grid-template-columns:1.35fr .85fr;gap:18px}.panel{background:#0d1917e8;border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 18px 60px #0005}
+.hero{min-height:410px;position:relative;overflow:hidden}.world{height:300px;display:grid;place-items:center}.earth{width:230px;height:230px;border-radius:50%;background:radial-gradient(circle at 34% 30%,#d8e5cf 0 3%,#547d68 4% 18%,#214b42 19% 45%,#0b2928 46% 70%,#071515 71%);box-shadow:0 0 80px #4aa27d55,inset -30px -20px 50px #0008}.orbit{position:absolute;width:420px;height:210px;border:1px solid #35554d;border-radius:50%;transform:rotate(-12deg);opacity:.6}.tag{position:absolute;padding:7px 10px;border:1px solid #36534a;border-radius:20px;background:#07110fdd;color:#b8cbc2}.t1{top:18%;left:7%}.t2{top:40%;right:6%}.t3{bottom:18%;left:14%}.t4{bottom:8%;right:18%}
+h2{font:500 20px Georgia,serif;margin:0 0 8px}label{display:block;color:#b7c9c1;margin:13px 0 6px}select,button{width:100%;padding:11px;border-radius:10px;border:1px solid #30443e;background:#091411;color:var(--text)}button{margin-top:16px;background:#cfe9d5;color:#0a1711;font-weight:700;cursor:pointer}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:15px}.metric{padding:13px;border:1px solid var(--line);border-radius:12px;background:#07110f}.metric b{display:block;font-size:20px;color:var(--accent)}.metric span{color:var(--muted);font-size:11px}.chart{height:180px;margin-top:14px;display:flex;align-items:end;gap:5px;border-bottom:1px solid var(--line);padding:10px}.bar{flex:1;background:linear-gradient(#9be7b1,#477866);border-radius:4px 4px 0 0;min-width:3px}.people{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.person{padding:12px;border:1px solid var(--line);border-radius:12px}.pill{display:inline-block;margin-top:6px;padding:3px 7px;border-radius:10px;background:#183027;color:#a9d8bb;font-size:11px}.science{border-left:2px solid var(--gold);padding-left:12px}.wide{margin-top:18px}.error{color:#ffb4a8;margin-top:10px}@media(max-width:900px){.grid{grid-template-columns:1fr}.metrics{grid-template-columns:1fr 1fr}.people{grid-template-columns:1fr}}
+</style></head>
+<body>
+<header><div><div class="eyebrow">WORLD LAB / prototype</div><h1>A machine for exploring civilization.</h1></div><div class="status" id="status">Ready · deterministic simulation</div></header>
+<main>
+<div class="grid"><section class="panel hero"><div class="eyebrow">WORLD</div><div class="world"><div class="orbit"></div><div class="earth"></div></div><div class="tag t1">individual minds</div><div class="tag t2">social networks</div><div class="tag t3">technology diffusion</div><div class="tag t4">branching futures</div><p class="muted">The same simulation can be inspected from civilization-scale aggregates down to individual agents.</p></section>
+<section class="panel"><div class="eyebrow">LAB</div><h2>Ask a counterfactual</h2><p class="muted">The server runs the real WORLD LAB engine.</p>
+<label>Simulated people</label><select id="people"><option>100</option><option selected>500</option><option>2000</option><option>5000</option></select>
+<label>Intervention</label><select id="intervention"><option value="clean">Affordable clean energy</option><option value="education">Education access</option><option value="technology">New household technology</option></select>
+<div class="row"><div><label>Population access</label><select id="scope"><option value=".25">25%</option><option value=".5" selected>50%</option><option value="1">100%</option></select></div><div><label>Years</label><select id="years"><option>5</option><option selected>10</option><option>20</option></select></div></div>
+<button id="run">Run experiment</button><div id="error" class="error"></div></section></div>
+<section class="panel wide"><div class="eyebrow">CIVILIZATION VIEW</div><h2 id="headline">No experiment yet</h2><div class="metrics" id="metrics"></div><div class="chart" id="chart"></div></section>
+<section class="grid wide"><div class="panel"><div class="eyebrow">PEOPLE VIEW</div><h2>Meet the world</h2><div class="people" id="peopleView"></div></div>
+<div class="panel"><div class="eyebrow">WHY LAYER</div><h2>Declared mechanism chain</h2><div class="science" id="science">Run an experiment to reveal the mechanism, evidence and uncertainty. Outcomes are model outputs, not claims about the real world.</div></div></section>
+</main>
+<script>
+var $=function(id){return document.getElementById(id)};
+function pct(v){return (v*100).toFixed(1)+'%'};
+function render(d){
+ $('status').textContent='Complete · reproducible run '+d.fingerprint.slice(0,10);
+ $('headline').textContent=d.scenario.scenario.scenario_id+' · '+d.scenario.scenario.model_version;
+ var m=d.divergence,s=m.scenario,delta=m.deltas;
+ var cards=[['Population',s.people_count.toLocaleString()],['Employment',pct(s.employment_rate)],['Wellbeing',s.wellbeing.toFixed(3)],['Model divergence',m.normalized_distance.toFixed(4)]];
+ $('metrics').innerHTML=cards.map(function(x){return '<div class="metric"><b>'+x[1]+'</b><span>'+x[0]+'</span></div>'}).join('');
+ var keys=['mean_income','mean_health','wellbeing','hope','trust','belonging','employment_rate'],vals=keys.map(function(k){return Math.abs(delta[k]||0)}),max=Math.max(.0001,...vals);
+ $('chart').innerHTML=vals.map(function(v,i){return '<div class="bar" title="'+keys[i]+' delta '+(delta[keys[i]]||0).toFixed(4)+'" style="height:'+Math.max(4,v/max*150)+'px"></div>'}).join('');
+ $('peopleView').innerHTML=d.people.map(function(p){return '<div class="person"><strong>'+p.agent_id+'</strong><br><span class="muted">age '+p.age+' · health '+p.health.toFixed(2)+'</span><br><span class="pill">'+p.status+'</span></div>'}).join('');
+ $('science').innerHTML='<p><b>Mechanism:</b> '+d.scenario.intervention.mechanism_id+'</p><p><b>Exposure:</b> '+(d.exposure.adopted||0)+' adopted · '+(d.exposure.declined||0)+' declined · '+(d.exposure.unexposed||0)+' unexposed</p><p><b>Evidence:</b> '+d.scenario.evidence_references.join(', ')+'</p><p><b>Uncertainty:</b> '+JSON.stringify(d.scenario.uncertainty)+'</p><p class="muted">Divergence is model output, not proof of real-world causality.</p>';
+}
+$('run').onclick=async function(){ $('error').textContent=''; $('status').textContent='Running individual-agent simulation…'; try{var r=await fetch('/api/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({people:Number($('people').value),intervention:$('intervention').value,scope:Number($('scope').value),years:Number($('years').value)})});var d=await r.json();if(!r.ok)throw Error(d.error||'run failed');render(d)}catch(e){$('status').textContent='Run failed';$('error').textContent=e.message}};
+</script></body></html>
