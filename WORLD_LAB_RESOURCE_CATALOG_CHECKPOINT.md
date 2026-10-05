@@ -5,11 +5,13 @@ Branch: feature/v0.9-social-network-foundation
 
 ## Verified implementation
 
-The repository now contains a provenance-first external resource registry:
+The repository contains a provenance-first external resource registry and the first controlled ingestion contract:
 
 - `worldlab/core/resource_catalog.py`
 - `worldlab/data/resources.json`
+- `worldlab/core/ingestion.py`
 - `worldlab/tests/test_resource_catalog.py`
+- `worldlab/tests/test_ingestion.py`
 
 The catalog currently records 8 high-value sources:
 
@@ -22,30 +24,27 @@ The catalog currently records 8 high-value sources:
 7. PCMDI Metrics
 8. FLAME GPU 2
 
-Each entry records provider, URI, resource type, license/terms note, access method, intended World Lab layers, spatial/temporal scope, resolution, integration status, provenance notes and limitations.
+The ingestion layer now provides:
+- immutable dataset manifests
+- SHA-256 content identity
+- an opt-in JSON fetch helper
+- NCEI-style observation -> EvidenceRecord conversion
+- offline fixtures for deterministic CI
 
-## Important truth condition
+## Truth conditions
 
-This checkpoint does NOT claim that these datasets have been downloaded into the repository.
+This milestone does NOT claim that NASA, NOAA, OSM or World Bank bulk datasets have been downloaded into the repository.
 
-`cataloged` means the source is registered for controlled ingestion.
-`review_only` means an external software project is an architecture/reference candidate.
-`integrated` is reserved for data that has actually passed an ingestion and validation path.
+A source is only `integrated` after its actual acquisition, checksum/version capture, transformation and validation have succeeded.
 
-This keeps the repository honest while making real-world acquisition reproducible.
+The NCEI adapter is a real ingestion path, but the committed test uses a small recorded fixture rather than live NOAA data. This keeps CI reproducible and avoids silently depending on network availability.
 
-## Research basis
+NOAA's official Access Data Service supports REST retrieval and can return JSON/CSV/NetCDF depending on dataset and parameters. citeturn0search0turn0search4
 
-NASA Earthdata Search currently exposes 2.2 billion+ Earth observations for discovery.
-NOAA NCEI provides programmatic weather/climate services.
-OpenStreetMap data is ODbL-licensed.
-The World Bank Data Catalog exposes thousands of development datasets.
-Mesa/Mesa-Geo, PCMDI Metrics and FLAME GPU 2 were reviewed as relevant public software references, with their current licenses recorded above.
+NASA's CMR provides programmatic discovery and metadata for Earth science holdings, which will be the basis for the NASA adapter rather than scraping pages. citeturn0search8
+
+OpenStreetMap provides regional/bulk extraction paths; the full world should not be committed to Git. citeturn0search5turn0search7
 
 ## Next milestone
 
-Build the first controlled ingestion adapter:
-
-source metadata -> remote dataset selection -> checksum/version capture -> EvidenceRecord -> geographic/environment mapping -> validation fixture.
-
-No large raw dataset should be committed to Git merely to make the repository larger. Large sources should remain externally cached or object-stored, while compact manifests, checksums, transformations and reproducible fixtures belong in the repository.
+Build source-specific NASA/NOAA acquisition manifests and then a first real downloaded sample with recorded provenance, checksum, license and geographic mapping.
