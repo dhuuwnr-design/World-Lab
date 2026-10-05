@@ -1,21 +1,37 @@
 # WORLD LAB CHECKPOINT
 
-## 2026-10-05 — v0.8 presentation contracts
+## 2026-10-05 — v0.8 engine-to-presentation integration
 
 ### Verified repository state
-- v0.8 presentation architecture branch exists at commit 649db2bfb5c3aed87cd0a11983081dd4bf2dcb87.
-- Repository access is active and the connected account has push/admin permission.
-- Implementation is continuing from the verified v0.8 architecture branch.
+- Repository: `dhuuwnr-design/World-Lab`
+- Branch: `feature/v0.8-presentation-architecture`
+- Latest implementation commit: `20da21bb6b81070dd94b655d2cab515feb6cf6a2`
+- GitHub access through the connected Composio account is active.
+- The earlier v0.8 architecture commit remains in history; this checkpoint advances it with executable engine integration.
 
 ### Implemented in this checkpoint
-- Added typed, immutable presentation contracts.
-- Added JSON-compatible serialization/deserialization helpers.
-- Added validation for identities, time ranges, provenance, causal weights and validation metrics.
-- Added deterministic replay identity metadata.
-- Added regression tests covering round trips, identity preservation, branching/replay and invalid inputs.
+- Added `worldlab/presentation/presenter.py` with a read-only `WorldPresenter`.
+- `WorldPresenter.world_snapshot()` projects the real `World.snapshot()` into the typed `WorldSnapshot` contract.
+- Existing engine snapshot fields are preserved verbatim under `population.engine_snapshot`; the presenter does not replace or reinterpret them.
+- Added deterministic entity projections for people, households, organizations and locations, preserving real IDs, parent household relationships and locations.
+- Added deterministic replay identity hashing from the actual projected world/entity state plus the model version and simulation seed.
+- Added a JSON-compatible `export()` payload containing world, entity and replay projections.
+- Added regression tests proving:
+  - real engine snapshot fields are preserved;
+  - entity IDs and relationships map to actual simulation state;
+  - presentation export is read-only;
+  - identical world state + seed produce identical replay identities.
+- Updated presentation package exports to expose `WorldPresenter`.
 
-### Design boundary
-These contracts are presentation-facing projections. They do not mutate simulation state and do not permit the UI to manufacture causal facts.
+### Scientific / architectural boundary
+- The presenter is an adapter, not a second simulation.
+- It does not invent events, causes, evidence or future outcomes.
+- No event provenance was fabricated because the current event queue does not yet retain immutable event records after dispatch.
+- Event capture/provenance is therefore still a separate engine task.
+
+### Verification status
+- Implementation commit was successfully created through Composio/GitHub.
+- GitHub Actions result for this new commit has not yet been verified as completed; do not treat CI as passed until a completed run is observed.
 
 ### Next target
-Connect World.snapshot() to WorldSnapshot without losing existing fields, add event capture/provenance to the engine, and then implement a read-only presenter service over actual simulation runs.
+Add immutable event capture to the actual event engine without changing simulation behavior, then project those real events into `EventRecord` with provenance only where provenance exists. After that, build a presenter-level scenario/replay service over actual runs.
