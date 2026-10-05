@@ -134,6 +134,8 @@ def run_scenario(
     else:
         result.schedule_intervention(spec.intervention.intervention_id)
     result.advance_days(target_day - result.day)
-    divergence = compare_worlds(baseline, result)
+    baseline_result = checkpoint.restore_world()
+    baseline_result.advance_days(target_day - baseline_result.day)
+    divergence = compare_worlds(baseline_result, result)
     final_checkpoint = ReplayCheckpoint.capture(result, identity)
-    return ScenarioRun(spec, scenario_fingerprint(spec), baseline, result, branch, divergence, final_checkpoint)
+    return ScenarioRun(spec, scenario_fingerprint(spec), baseline_result, result, branch, divergence, final_checkpoint)
