@@ -1,39 +1,40 @@
 # WORLD LAB CHECKPOINT
 
-## 2026-10-05 — v0.8 individual intelligence + replay foundation
+## 2026-10-05 — v0.8 full deterministic world restore
 
 ### Verified repository state
 - Repository: `dhuuwnr-design/World-Lab`
 - Branch: `feature/v0.8-presentation-architecture`
-- Latest implementation commit: `863bda6ad317dd6d6b7791cd700ef6a8b2a41a3d`
-- CI for `5dbab2f...`: **success**.
-- CI for `863bda6...`: **in progress** when this checkpoint was written; not yet verified green.
+- Replay foundation CI: **success** for `863bda6ad317dd6d6b7791cd700ef6a8b2a41a3d`.
+- Latest implementation commit: `4f4264ad298b128e5b1da3367d0c14f43c2d7571`.
+- CI for `4f4264ad...`: **in progress** when this checkpoint was written; not yet verified green.
 
 ### Implemented
-- Persistent individual agents with explicit `Perception` and `DecisionContext`.
-- Rich individual perception from personal, household, relationship, organization, location and social-context state.
-- Callback-free `EventDeclaration` objects for deterministic checkpoint/replay representation.
-- Event queue can expose pending and historical declarations without serializing runtime callback functions.
-- `ReplayCheckpoint` stores:
-  - replay identity/model/scenario/seed
-  - JSON-compatible world snapshot
-  - pending event declarations
-  - historical event declarations
-- Stable canonical JSON and SHA-256 state fingerprints.
-- Round-trip tests for replay checkpoints and event declarations.
-- Existing event dispatch behavior remains callback-driven; replay declarations are intentionally data-only and do not infer behavior.
+- `World.state_dict()` serializes complete mutable core simulation state:
+  - people
+  - individual agents and bounded memories/beliefs
+  - social states
+  - households
+  - organizations
+  - locations
+  - relationships
+  - social contexts
+  - demographic profile
+  - simulation counters/time
+  - deterministic RNG state
+- `World.from_state_dict()` restores those structures and RNG state.
+- `ReplayCheckpoint.capture(world, identity)` now captures the complete mutable world state rather than only the aggregate snapshot.
+- `ReplayCheckpoint.restore_world()` restores a checkpoint when there are no pending runtime callbacks.
+- Added exact state restoration tests and checkpoint restoration tests.
+- Callback-free event declarations remain separate from runtime callbacks.
 
-### Scientific boundary
-The replay layer currently records reproducible state identity and declared event semantics; it does **not** yet claim that a complete WORLD LAB simulation can be reconstructed from a checkpoint. Runtime callbacks and full entity/agent serialization still need an explicit restore mechanism. Do not claim full branching/replay until that restore path is implemented and tested.
+### Verification boundary
+The new restore path is designed to make the core world reproducible, but **pending scheduled callbacks are intentionally not restored yet**. A checkpoint with pending callbacks raises a clear error instead of silently producing an incorrect branch. Full event-handler restoration is the next required step before arbitrary mid-event checkpoints can branch.
 
 ### Next implementation target
-1. Verify CI for `863bda6...`.
-2. Add explicit serializable entity/agent/world state and a restore constructor.
-3. Register deterministic event consequence handlers by stable event type instead of serializing callbacks.
-4. Implement branch creation from a checkpoint at a divergence day.
-5. Add selective technology/policy exposure to chosen people/population scopes.
-6. Run baseline and intervention branches for multiple years and compare trajectories with uncertainty/provenance.
-7. Preserve lightweight routine agents and selective deeper reasoning.
-
-### Long-term direction
-WORLD LAB is being built as an evidence-grounded experimental world model where individual decisions, relationships, institutions, technology and demography interact over years and generations. It must remain reproducible and explicit about assumptions and uncertainty rather than pretending to be a literal copy of human consciousness or the real world.
+1. Verify CI for `4f4264ad...`.
+2. Add deterministic event-handler registration keyed by stable event type/name so declared pending events can be restored without serializing Python callbacks.
+3. Implement explicit branch creation with parent branch, divergence day, scenario ID, seed and model version.
+4. Add selective technology/policy exposure to a population scope and connect exposure to individual decisions and declared consequence events.
+5. Run baseline/intervention trajectories and compare outcomes with uncertainty/provenance.
+6. Continue scaling the individual-agent model without requiring an LLM call per person/tick.
