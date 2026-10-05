@@ -76,6 +76,7 @@ def test_affiliations_survive_state_round_trip():
     assert set(restored.affiliations) == set(world.affiliations)
     assert any(person.affiliation_ids for person in restored.people.values())
 
+
 def test_affiliations_follow_life_stage():
     world = World(seed=27)
     generate_population(world, 80)
@@ -88,6 +89,7 @@ def test_affiliations_follow_life_stage():
     _sync_institutional_affiliations(world)
     assert all(world.affiliations[aid].active_to_day == world.day for aid in education_ids)
     assert any(world.organizations[a.organization_id].sector == "community" and a.active_to_day is None for a in (world.affiliations[aid] for aid in person.affiliation_ids))
+
 
 def test_affiliation_change_rewires_institutional_relationships():
     world = World(seed=28)
@@ -109,3 +111,27 @@ def test_affiliation_change_rewires_institutional_relationships():
             if source == person.person_id and relationship.relationship_type == "education"
         }
         assert new_targets != old_targets or not new_targets
+
+
+def test_multiplex_relationships_preserve_simultaneous_contexts():
+    world = World(seed=29)
+    generate_population(world, 80)
+    grouped = {}
+    for source, target, layer in world.multiplex_relationships:
+        grouped.setdefault((source, target), set()).add(layer)
+    assert any(len(layers) >= 2 for layers in grouped.values())
+
+
+def test_multiplex_relationships_survive_round_trip():
+    world = World(seed=30)
+    generate_population(world, 80)
+    before = {
+        key: relationship.relationship_type
+        for key, relationship in world.multiplex_relationships.items()
+    }
+    restored = World.from_state_dict(world.state_dict())
+    after = {
+        key: relationship.relationship_type
+        for key, relationship in restored.multiplex_relationships.items()
+    }
+    assert after == before
