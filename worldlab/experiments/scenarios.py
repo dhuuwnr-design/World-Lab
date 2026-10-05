@@ -71,6 +71,7 @@ class ScenarioRun:
     branch: BranchRecord
     divergence: DivergenceMetrics
     checkpoint: ReplayCheckpoint
+    trajectory: tuple[dict[str, object], ...] = ()
 
     def to_dict(self) -> dict:
         return {
@@ -85,6 +86,7 @@ class ScenarioRun:
                 "model_version": self.branch.model_version,
             },
             "divergence": self.divergence.to_dict(),
+            "trajectory": [dict(point) for point in self.trajectory],
             "checkpoint_identity": {
                 "model_version": self.checkpoint.identity.model_version,
                 "scenario_id": self.checkpoint.identity.scenario_id,
@@ -133,9 +135,24 @@ def run_scenario(
         result.apply_intervention(spec.intervention.intervention_id, day=result.day)
     else:
         result.schedule_intervention(spec.intervention.intervention_id)
-    result.advance_days(target_day - result.day)
+    # Record an interpretable trajectory at yearly checkpoints. The same deterministic
+    # world transition is used; this is presentation data, not a second simulation.
     baseline_result = checkpoint.restore_world()
-    baseline_result.advance_days(target_day - baseline_result.day)
+    points: list[dict[str, object]] = []
+    for year in range((target_day - baseline.day) // 365 + 1):
+        day = baseline.day + year * 365
+        if year:
+            result.advance_days(365)
+            baseline_result.advance_days(365)
+        pair = compare_worlds(baseline_result, result)
+        points.append({
+            "year": day,
+            "normalized_distance": pair.normalized_distance,
+            "mean_income_delta": pair.deltas["mean_income"],
+            "mean_health_delta": pair.deltas["mean_health"],
+            "wellbeing_delta": pair.deltas["wellbeing"],
+            "employment_delta": pair.deltas["employment_rate"],
+        })
     divergence = compare_worlds(baseline_result, result)
     final_checkpoint = ReplayCheckpoint.capture(result, identity)
-    return ScenarioRun(spec, scenario_fingerprint(spec), baseline_result, result, branch, divergence, final_checkpoint)
+    return ScenarioRun(spec, scenario_fingerprint(spec), baseline_result, result, branch, divergence, final_checkpoint, tuple(points))
