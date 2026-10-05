@@ -247,8 +247,13 @@ class World:
             self.day = previous_day
 
     def _annual_processes(self) -> None:
+        # Age and let each individual process the social environment once per
+        # simulated year. Social learning is bounded and deterministic; it is
+        # a model mechanism, not an empirical claim about real-world effect size.
         for person in self.people.values():
             person.age += 1
+        self._annual_social_learning()
+        for person in self.people.values():
             if person.agent is not None:
                 person.agent.observe(f"year:{self.year}", self.perception_for(person.person_id))
         self.last_year_births = 0
@@ -259,6 +264,25 @@ class World:
             self.last_year_deaths = result.deaths
             self.total_births += result.births
             self.total_deaths += result.deaths
+
+    def _annual_social_learning(self) -> None:
+        """Update individual adoption beliefs from accumulated social exposure."""
+        updates: dict[int, float] = {}
+        for person in sorted(self.people.values(), key=lambda item: item.person_id):
+            if person.agent is None:
+                continue
+            peer_adoption = self.social_influence_for(person.person_id, "adoption")
+            current = float(person.agent.beliefs.get("adoption", 0.0))
+            sensitivity = max(0.0, min(1.0, person.agent.social_sensitivity))
+            # Small yearly learning step prevents instantaneous consensus.
+            learning_rate = 0.08 + 0.17 * sensitivity
+            updates[person.person_id] = current + learning_rate * (peer_adoption - current)
+        for person_id, value in updates.items():
+            person = self.people[person_id]
+            person.agent.observe(
+                f"social-learning:{self.year}:{person_id}",
+                {"adoption": max(0.0, min(1.0, value))},
+            )
 
     def apply_social_experience(self, person_id: int, **deltas: float) -> None:
         person = self.people.get(person_id)

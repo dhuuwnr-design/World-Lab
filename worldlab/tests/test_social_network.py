@@ -36,3 +36,17 @@ def test_intervention_uses_relationship_mediated_social_effect():
     world.people[peer_id].agent.beliefs["adoption"] = 1.0
     records = world.apply_intervention("social-test")
     assert records and records[0].status in {"adopted", "declined"}
+
+
+def test_annual_social_learning_is_gradual():
+    world = World(seed=24)
+    generate_population(world, 20)
+    person_id, peer_id = next(iter(world.relationships))
+    world.people[person_id].agent.beliefs["adoption"] = 0.0
+    world.people[peer_id].agent.beliefs["adoption"] = 1.0
+    before = world.people[person_id].agent.beliefs["adoption"]
+    world.advance_days(365)
+    after = world.people[person_id].agent.beliefs["adoption"]
+    assert after > before
+    assert after < 1.0
+    assert "social-learning:2027:" + str(person_id) in world.people[person_id].agent.memory.recent_events
