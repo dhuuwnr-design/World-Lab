@@ -1,4 +1,5 @@
 from worldlab.core.entities import Person
+from worldlab.core.agents import IndividualAgent
 from worldlab.core.interventions import InterventionDefinition, PopulationScope
 from worldlab.core.world import World
 from worldlab.core.replay import ReplayCheckpoint
@@ -10,6 +11,7 @@ def make_world() -> World:
     world.people[1] = Person(
         person_id=1, age=30, sex="F", location_id=1, household_id=1,
         money=10.0,
+        agent=IndividualAgent(agent_id="person:1", seed=1, goals={"security": 1.0}, beliefs={}, risk_tolerance=0.5, social_sensitivity=0.5),
     )
     return world
 
