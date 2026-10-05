@@ -205,7 +205,9 @@ class InterventionEngine:
                             raise TypeError(f"person effect requires numeric field: {field_name}")
                         setattr(person, field_name, current + float(delta))
                     if person.agent is not None:
-                        person.agent.observe(f"intervention:{intervention.intervention_id}", intervention.belief_updates)
+                        belief_updates = dict(intervention.belief_updates)
+                        belief_updates["adoption"] = 1.0
+                        person.agent.observe(f"intervention:{intervention.intervention_id}", belief_updates)
             batch.append(ExposureRecord(intervention.intervention_id, person.person_id, status, current_day, intervention.mechanism_id))
         self.records.extend(batch)
         return tuple(batch)
@@ -214,6 +216,7 @@ class InterventionEngine:
         person = world.people[person_id]
         if person.agent is None:
             return "declined"
+        peer_adoption = world.social_influence_for(person_id, "adoption")
         context = world.decision_context_for(
             person_id,
             actions={
@@ -221,7 +224,7 @@ class InterventionEngine:
                     "benefit": intervention.adoption_benefit,
                     "cost": intervention.adoption_cost,
                     "uncertainty": intervention.adoption_uncertainty,
-                    "social_effect": intervention.adoption_social_effect,
+                    "social_effect": intervention.adoption_social_effect * peer_adoption,
                 },
                 "wait": {"benefit": 0.0, "cost": 0.0, "uncertainty": 0.0, "social_effect": 0.0},
             },

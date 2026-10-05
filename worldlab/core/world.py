@@ -61,6 +61,35 @@ class World:
             return 0.0
         return value / (value + scale)
 
+    def social_influence_for(self, person_id: int, signal: str) -> float:
+        """Calculate a bounded peer signal from explicit relationship ties."""
+        person = self.people.get(person_id)
+        if person is None:
+            raise KeyError(f"unknown person_id: {person_id}")
+        numerator = denominator = 0.0
+        for (source, target), relationship in sorted(self.relationships.items()):
+            if source != person_id:
+                continue
+            other = self.people.get(target)
+            if other is None:
+                continue
+            if signal == "adoption":
+                value = other.agent.beliefs.get("adoption", 0.0) if other.agent else 0.0
+            else:
+                if not hasattr(other.social_state, signal):
+                    raise ValueError(f"unknown social signal: {signal}")
+                value = float(getattr(other.social_state, signal))
+                if signal == "affect_valence":
+                    value = (value + 1.0) / 2.0
+            tie = relationship.closeness * relationship.contact_frequency * relationship.trust
+            tie *= 1.0 - 0.5 * relationship.conflict
+            numerator += tie * value
+            denominator += tie
+        if denominator == 0.0:
+            return 0.0
+        normalized = numerator / denominator
+        return normalized if signal == "adoption" else 2.0 * normalized - 1.0
+
     def perception_for(self, person_id: int) -> dict[str, float]:
         person = self.people.get(person_id)
         if person is None:
@@ -109,6 +138,8 @@ class World:
             "household_resources": household_resources,
             "housing_pressure": housing_pressure,
             "relationship_connection": relationship_connection,
+            "peer_belonging": max(0.0, min(1.0, 0.5 + 0.5 * self.social_influence_for(person_id, "belonging"))),
+            "peer_trust": max(0.0, min(1.0, 0.5 + 0.5 * self.social_influence_for(person_id, "trust"))),
             "organization_capacity": (
                 self._saturating(organization.capacity, 100.0)
                 if organization is not None
