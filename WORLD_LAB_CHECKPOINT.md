@@ -1,37 +1,37 @@
 # WORLD LAB CHECKPOINT
 
-## 2026-10-05 — v0.8 engine-to-presentation integration
+## 2026-10-05 — v0.8 individual-intelligence integration
 
 ### Verified repository state
 - Repository: `dhuuwnr-design/World-Lab`
 - Branch: `feature/v0.8-presentation-architecture`
-- Latest implementation commit: `20da21bb6b81070dd94b655d2cab515feb6cf6a2`
-- GitHub access through the connected Composio account is active.
-- The earlier v0.8 architecture commit remains in history; this checkpoint advances it with executable engine integration.
+- Latest implementation commit: `fc801911dbe7e6e7a6c5e7f6a481866e864ed4e9`
+- Previous agent integration commit: `718b98e910a105dd102fce8b2b849caf21254a6d`
+- CI for `718b98e...`: completed successfully.
+- CI for `fc801911...`: queued when this checkpoint was written; not yet verified green.
 
-### Implemented in this checkpoint
-- Added `worldlab/presentation/presenter.py` with a read-only `WorldPresenter`.
-- `WorldPresenter.world_snapshot()` projects the real `World.snapshot()` into the typed `WorldSnapshot` contract.
-- Existing engine snapshot fields are preserved verbatim under `population.engine_snapshot`; the presenter does not replace or reinterpret them.
-- Added deterministic entity projections for people, households, organizations and locations, preserving real IDs, parent household relationships and locations.
-- Added deterministic replay identity hashing from the actual projected world/entity state plus the model version and simulation seed.
-- Added a JSON-compatible `export()` payload containing world, entity and replay projections.
-- Added regression tests proving:
-  - real engine snapshot fields are preserved;
-  - entity IDs and relationships map to actual simulation state;
-  - presentation export is read-only;
-  - identical world state + seed produce identical replay identities.
-- Updated presentation package exports to expose `WorldPresenter`.
+### Implemented
+- `worldlab/core/agents.py`: deterministic individual cognitive agent with:
+  - persistent goals and beliefs
+  - risk tolerance and social sensitivity
+  - bounded event memory
+  - perception normalization
+  - deterministic action scoring
+  - learning/observation
+- `Person.agent`: optional persistent individual agent.
+- Population generation creates an individual agent for every generated person.
+- Annual simulation now feeds each agent a yearly lived-state observation.
+- Social experiences are also recorded into the person's agent memory/beliefs.
+- Regression tests cover differentiated decisions, bounded perception, memory/learning, and annual world-to-agent feedback.
 
-### Scientific / architectural boundary
-- The presenter is an adapter, not a second simulation.
-- It does not invent events, causes, evidence or future outcomes.
-- No event provenance was fabricated because the current event queue does not yet retain immutable event records after dispatch.
-- Event capture/provenance is therefore still a separate engine task.
+### Scientific boundary
+This is an individual decision-model primitive, not a claim of consciousness or exact human psychology. Country, class, culture, institutions, relationships and life history must remain contextual mechanisms rather than deterministic personality stereotypes.
 
-### Verification status
-- Implementation commit was successfully created through Composio/GitHub.
-- GitHub Actions result for this new commit has not yet been verified as completed; do not treat CI as passed until a completed run is observed.
-
-### Next target
-Add immutable event capture to the actual event engine without changing simulation behavior, then project those real events into `EventRecord` with provenance only where provenance exists. After that, build a presenter-level scenario/replay service over actual runs.
+### Next implementation target
+After CI verification:
+1. Add explicit `Perception` / `DecisionContext` structures so agents receive world, household, social and economic signals rather than a single wellbeing value.
+2. Add action consequences as explicit world events with declared metadata.
+3. Make intervention/technology exposure selective by population scope.
+4. Build deterministic scenario branching/replay from serializable state checkpoints.
+5. Compare baseline vs intervention trajectories and preserve uncertainty/provenance.
+6. Keep routine agents lightweight; reserve deeper reasoning for selected agents/experiments rather than invoking an LLM for every person every tick.
