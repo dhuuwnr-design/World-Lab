@@ -36,5 +36,5 @@ Relationship parameters in this milestone are synthetic priors, not country-spec
 6. Validate the showable prototype end-to-end and keep the automated test suite green after every milestone.
 
 ## Progress estimate
-- Current engineering direction: approximately 46% of the eventual WORLD LAB vision, pending CI verification.
+- Current engineering direction: approximately 47% of the eventual WORLD LAB vision; local validation is green, CI is pending for the latest lifecycle change.
 - This is an engineering estimate, not a scientific accuracy score.

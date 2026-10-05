@@ -7,6 +7,8 @@ transition probabilities and country/region differences.
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
+from .entities import Affiliation, Organization
+
 if TYPE_CHECKING:
     from .world import World
 
@@ -21,6 +23,62 @@ def life_stage(age: int) -> str:
     if age < 65:
         return "working_age"
     return "older_adult"
+
+
+def _active_affiliations(world: "World", person_id: int) -> list[Affiliation]:
+    return [world.affiliations[aid] for aid in world.people[person_id].affiliation_ids if aid in world.affiliations and world.affiliations[aid].active_to_day is None]
+
+
+def _new_organization(world: "World", sector: str, location_id: int) -> Organization:
+    organization_id = max(world.organizations, default=0) + 1
+    capacity = {"education": 24, "workplace": 18, "community": 32}[sector]
+    organization = Organization(organization_id=organization_id, sector=sector, location_id=location_id, capacity=float(capacity))
+    world.organizations[organization_id] = organization
+    return organization
+
+
+def _sync_institutional_affiliations(world: "World") -> None:
+    """Keep institutional memberships aligned with each person's current life state."""
+    for person in sorted(world.people.values(), key=lambda item: item.person_id):
+        desired = {"community"}
+        if 6 <= person.age <= 22:
+            desired.add("education")
+        if 18 <= person.age <= 65 and person.employed:
+            desired.add("workplace")
+        active = _active_affiliations(world, person.person_id)
+        active_by_sector = {}
+        for affiliation in active:
+            organization = world.organizations.get(affiliation.organization_id)
+            if organization is not None:
+                active_by_sector.setdefault(organization.sector, []).append(affiliation)
+        for sector, memberships in active_by_sector.items():
+            if sector in desired:
+                continue
+            for affiliation in memberships:
+                affiliation.active_to_day = world.day
+                organization = world.organizations.get(affiliation.organization_id)
+                if organization is not None:
+                    if person.person_id in organization.member_ids:
+                        organization.member_ids.remove(person.person_id)
+                    if person.person_id in organization.employees:
+                        organization.employees.remove(person.person_id)
+        for sector in sorted(desired):
+            if sector in active_by_sector and any(a.active_to_day is None for a in active_by_sector[sector]):
+                continue
+            candidates = [o for o in world.organizations.values() if o.sector == sector and o.location_id == person.location_id and len(o.member_ids) < max(1, int(o.capacity or 32))]
+            organization = min(candidates, key=lambda item: len(item.member_ids)) if candidates else _new_organization(world, sector, person.location_id)
+            role = {"education": "student", "workplace": "worker", "community": "member"}[sector]
+            affiliation_id = max(world.affiliations, default=0) + 1
+            world.affiliations[affiliation_id] = Affiliation(affiliation_id, person.person_id, organization.organization_id, role, world.day)
+            person.affiliation_ids.append(affiliation_id)
+            organization.member_ids.append(person.person_id)
+            if role == "worker":
+                organization.employees.append(person.person_id)
+        active = _active_affiliations(world, person.person_id)
+        workplace = next((a for a in active if world.organizations.get(a.organization_id) and world.organizations[a.organization_id].sector == "workplace"), None)
+        person.organization_id = workplace.organization_id if workplace else (active[0].organization_id if active else None)
+        if person.agent is not None:
+            person.agent.observe(f"affiliations:{world.year}:{person.person_id}", {"institution_count": float(len(active))})
 
 
 def advance_life_course(world: "World") -> None:
