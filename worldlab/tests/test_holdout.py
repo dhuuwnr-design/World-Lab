@@ -18,7 +18,7 @@ def test_time_series_split_is_chronological_and_disjoint():
 
 def test_holdout_metrics_and_threshold():
     metrics, passed = evaluate_holdout({"2021": 10, "2022": 20}, {"2021": 10, "2022": 21}, threshold=1.0)
-    assert metrics["normalized_rmse"] == pytest.approx(2 ** 0.5 / 2 ** 0.5)
+    assert metrics["normalized_rmse"] == pytest.approx(2 ** -0.5)
     assert passed
 
 
