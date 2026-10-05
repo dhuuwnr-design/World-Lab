@@ -1,37 +1,58 @@
 # WORLD LAB - Checkpoint
 
 ## Current branch
-- `feature/v0.8-presentation-architecture`
+- feature/v0.8-presentation-architecture
 
 ## Latest verified milestone
-- Commit: `3b769c27ae5ef7a08b3e6508a4837ee18e6df882`
-- Deterministic intervention/exposure engine repaired and baseline-vs-scenario divergence metrics added.
-- CI for `eea8f10b7909bdb81d8d155b0babd1d6263b9fa3`: SUCCESS (run #139).
-- CI for `3b769c27ae5ef7a08b3e6508a4837ee18e6df882`: SUCCESS (run #140).
+- Commit: 83f9b65656d578d1da26cad6c7c1ecb248841b04
+- GitHub Actions run #148: SUCCESS.
+- 67 tests passed in the preceding failed run before the final replay-fixture correction; the final run #148 is the authoritative CI gate and completed successfully.
+- Replay intervention checkpoints now restore persisted intervention handlers correctly, and the replay regression fixture uses an individual cognitive agent.
+
+## October 13 showable prototype
+- Prototype commit: 7618fca25f278230196632a4e18c2af1eef52970, followed by verified replay/scenario fixes through 83f9b65656d578d1da26cad6c7c1ecb248841b04.
+- prototype/index.html: civilization-observatory style interface.
+- scripts/serve_prototype.py: zero-dependency local HTTP server.
+- The UI can select simulated population size, intervention, population access fraction, and simulation horizon.
+- The server runs the actual WORLD LAB engine, not a fake front-end animation.
+- The demo shows civilization-scale metrics, divergence, individual-agent samples, exposure/adoption counts, declared mechanisms, evidence references, and uncertainty.
+- Prototype README documents local launch.
 
 ## Current implementation milestone
-- Intervention & Exposure Engine is active and tested.
-- Supports declarative population scopes, deterministic exposure/access sampling, individual-agent adoption decisions, measurable person effects, belief learning, exposure history serialization, and branch-safe application.
-- `worldlab/experiments/metrics.py` now measures weighted population, employment, income, money, health, education, and social-state aggregates and computes deterministic baseline-vs-scenario deltas plus a normalized distance.
-- Metrics explicitly describe model-output divergence and do not claim real-world causal truth.
+- Individual intelligence architecture is active: generated people receive persistent individual cognitive agents with goals, beliefs, memory, risk tolerance, social sensitivity, perception and decision context.
+- Deterministic replay/checkpointing and branching are active.
+- Intervention definitions, population scopes, exposure/access, agent adoption, effects, beliefs, evidence and uncertainty are persisted.
+- ScenarioSpec binds ScenarioDefinition, intervention, population scope, evidence, uncertainty and deterministic scenario fingerprint.
+- run_scenario creates a baseline branch and intervention branch, advances both to the same horizon, and computes model-output divergence.
+- Presentation contracts and event/causal projections remain available for future UI expansion.
 
 ## Scientific boundary
 - Intervention outcomes are model outputs, not predictions of the real world.
-- Evidence references and uncertainty are explicit fields.
-- Population sampling does not consume the core world's RNG, preserving reproducibility.
-- Individual agents drive adoption when available; the engine does not encode country/class personality stereotypes.
+- Evidence references and uncertainty remain explicit.
+- Country/class/culture context must influence distributions and institutions, not hard-code personality stereotypes.
+- The individual agent is an artificial decision model, not a claim of consciousness.
+- The October 13 demo must visibly distinguish simulation output from observed evidence.
 
-## Next major build
-1. Connect intervention lifecycle to persistent event/replay declarations.
-2. Persist intervention definitions and intervention-engine state inside replay checkpoints.
-3. Add time-varying exposure/adoption and diffusion through relationships/organizations.
-4. Build scenario contracts that bind branch provenance, intervention, mechanism, evidence, uncertainty, and metrics.
-5. Expand calibration/validation against real historical trajectories.
+## Next major build for the October 13 demo
+1. Validate the prototype end-to-end against the actual repository checkout.
+2. Add time-series trajectories instead of only endpoint metrics.
+3. Add branching-futures visualization with baseline vs multiple intervention branches.
+4. Add a stronger People View showing an individual agent's trajectory, decisions and relationships.
+5. Add intervention diffusion through relationships/organizations and repeated time-varying exposure.
+6. Package/deploy a reliable demo URL if the chosen hosting path is stable and free/available.
+7. Re-run CI after every implementation milestone and never mark an unverified state as complete.
+
+## Post-demo scientific build
+1. Calibration against real historical trajectories.
+2. Geography, migration, labor, health, education, institutions, media and environmental feedback loops.
+3. Scale/performance architecture for much larger populations.
+4. Held-out validation, sensitivity analysis and reproducible experiment bundles.
+5. Civilization-scale presentation: planet -> country -> city -> household -> person -> relationship -> causal chain -> branching future.
 
 ## Progress estimate
-- Current: approximately 32% of the eventual WORLD LAB vision.
-- 50% target: usable civilization experiment core with interventions, population selection, individual decisions, multi-year branching, measurable divergence, uncertainty/provenance, and validation gates.
+- Current engineering direction: approximately 38% of the eventual WORLD LAB vision.
+- October 13 target: a genuinely showable, interactive prototype proving individual-agent simulation, counterfactual experimentation, deterministic branching, measurable divergence and scientific provenance.
 - Full target: calibrated civilization-scale world model, broad coupled systems, large-scale performance, historical validation, mature branching/replay, and the civilization-observatory presentation layer.
 
 ## Continue rule
-On `Continue`, inspect this checkpoint and the repository tip, verify the latest CI result, then continue the next major build. Do not stop at trivial corrections or invent unverified project state.
+On Continue, inspect this checkpoint and the repository tip, verify the latest CI result, then continue the next major build. For the October 13 milestone, prioritize actual demo quality and end-to-end reliability over adding disconnected research features. Do not stop at trivial corrections or invent unverified project state.
