@@ -14,7 +14,7 @@ from typing import Any
 
 from worldlab.core.world import World
 
-from .contracts import EntitySnapshot, ReplayIdentity, WorldSnapshot, to_dict
+from .contracts import EntitySnapshot, IndividualAgentSnapshot, ReplayIdentity, WorldSnapshot, to_dict
 
 
 def _stable_json(value: Any) -> str:
@@ -33,7 +33,7 @@ def _entity_attributes(entity: Any) -> dict[str, Any]:
 class WorldPresenter:
     """Build deterministic, read-only presentation projections of a World."""
 
-    def __init__(self, world: World, model_version: str = "0.8-dev") -> None:
+    def __init__(self, world: World, model_version: str = "0.9-dev") -> None:
         self._world = world
         self.model_version = model_version
 
@@ -119,6 +119,41 @@ class WorldPresenter:
 
         return tuple(entities)
 
+    def people_view(self, person_id: int) -> IndividualAgentSnapshot:
+        """Expose one person's model state without implying consciousness.
+
+        The projection is read-only and deliberately limited to model variables:
+        goals, beliefs, bounded traits, recent event memory, decisions, and the
+        person's current deterministic perception of the world.
+        """
+        person = self._world.people.get(person_id)
+        if person is None:
+            raise KeyError(f"unknown person_id: {person_id}")
+        if person.agent is None:
+            raise ValueError(f"person {person_id} has no individual agent")
+
+        agent = person.agent
+        decisions = tuple(
+            {
+                "reason": record.reason,
+                "chosen_action": record.chosen_action,
+                "perception": dict(record.perception),
+                "day": record.day,
+            }
+            for record in agent.decision_history
+        )
+        return IndividualAgentSnapshot(
+            agent_id=agent.agent_id,
+            person_id=person_id,
+            goals=dict(agent.goals),
+            beliefs=dict(agent.beliefs),
+            risk_tolerance=agent.risk_tolerance,
+            social_sensitivity=agent.social_sensitivity,
+            recent_events=tuple(agent.memory.recent_events),
+            decision_history=decisions,
+            current_perception=self._world.perception_for(person_id),
+        )
+
     def replay_identity(
         self,
         scenario_id: str = "live-world",
@@ -140,10 +175,13 @@ class WorldPresenter:
             evidence_snapshot=evidence_snapshot,
         )
 
-    def export(self, scenario_id: str = "live-world") -> dict[str, Any]:
+    def export(self, scenario_id: str = "live-world", *, person_id: int | None = None) -> dict[str, Any]:
         """Return a JSON-compatible, read-only presentation payload."""
-        return {
+        payload = {
             "world": to_dict(self.world_snapshot()),
             "entities": [to_dict(entity) for entity in self.entity_snapshots()],
             "replay": to_dict(self.replay_identity(scenario_id=scenario_id)),
         }
+        if person_id is not None:
+            payload["person"] = to_dict(self.people_view(person_id))
+        return payload

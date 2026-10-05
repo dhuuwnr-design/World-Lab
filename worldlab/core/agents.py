@@ -27,6 +27,16 @@ class DecisionContext:
     reason: str = ""
 
 
+@dataclass(frozen=True)
+class DecisionRecord:
+    """Deterministic, inspectable record of one agent decision."""
+
+    reason: str
+    chosen_action: str
+    perception: Mapping[str, float]
+    day: int | None = None
+
+
 @dataclass
 class AgentMemory:
     recent_events: list[str] = field(default_factory=list)
@@ -48,6 +58,7 @@ class IndividualAgent:
     risk_tolerance: float = 0.5
     social_sensitivity: float = 0.5
     memory: AgentMemory = field(default_factory=AgentMemory)
+    decision_history: list[DecisionRecord] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         for value in (self.risk_tolerance, self.social_sensitivity):
@@ -86,8 +97,17 @@ class IndividualAgent:
             scored.append((score, name))
         return max(scored, key=lambda item: (item[0], item[1]))[1]
 
-    def decide(self, context: DecisionContext) -> str:
-        return self.choose(context.actions)
+    def decide(self, context: DecisionContext, *, day: int | None = None) -> str:
+        chosen = self.choose(context.actions)
+        self.decision_history.append(
+            DecisionRecord(
+                reason=context.reason,
+                chosen_action=chosen,
+                perception=dict(context.perception.signals),
+                day=day,
+            )
+        )
+        return chosen
 
     def observe(self, event_id: str, learning: Mapping[str, float] | None = None) -> None:
         self.memory.remember(event_id)

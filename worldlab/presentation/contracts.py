@@ -46,6 +46,24 @@ class EntitySnapshot:
         if not self.entity_id.strip() or not self.entity_type.strip(): raise ContractError("entity_id and entity_type must not be empty")
 
 @dataclass(frozen=True)
+class IndividualAgentSnapshot:
+    agent_id: str
+    person_id: int
+    goals: Mapping[str, float] = field(default_factory=dict)
+    beliefs: Mapping[str, float] = field(default_factory=dict)
+    risk_tolerance: float = 0.5
+    social_sensitivity: float = 0.5
+    recent_events: tuple[str, ...] = ()
+    decision_history: tuple[Mapping[str, Any], ...] = ()
+    current_perception: Mapping[str, float] = field(default_factory=dict)
+    def __post_init__(self):
+        if not self.agent_id.strip() or self.person_id < 0:
+            raise ContractError("agent_id and person_id must be valid")
+        for value in (self.risk_tolerance, self.social_sensitivity):
+            if not 0.0 <= value <= 1.0:
+                raise ContractError("agent traits must be between 0 and 1")
+
+@dataclass(frozen=True)
 class EventRecord:
     event_id: str
     simulation_time: int
