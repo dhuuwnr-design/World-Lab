@@ -7,10 +7,7 @@ from typing import Callable, List, Mapping
 
 @dataclass(frozen=True)
 class EventMetadata:
-    """Declared, serializable semantics attached to a scheduled event.
-
-    The scheduler never infers these values from callback code or event names.
-    """
+    """Declared, serializable semantics attached to a scheduled event."""
 
     actor_ids: tuple[str, ...] = ()
     mechanism_ids: tuple[str, ...] = ()
@@ -27,6 +24,22 @@ class EventMetadata:
             raise ValueError("evidence_references must not contain empty values")
 
 
+@dataclass(frozen=True)
+class EventDeclaration:
+    """Callback-free representation of an event for checkpoint/replay."""
+
+    day: int
+    sequence: int
+    name: str
+    metadata: EventMetadata
+
+    def __post_init__(self) -> None:
+        if self.day < 0:
+            raise ValueError("event day must be non-negative")
+        if self.sequence < 1:
+            raise ValueError("event sequence must be positive")
+
+
 @dataclass(order=True)
 class ScheduledEvent:
     day: int
@@ -34,6 +47,14 @@ class ScheduledEvent:
     callback: Callable = field(compare=False)
     name: str = field(default="", compare=False)
     metadata: EventMetadata = field(default_factory=EventMetadata, compare=False)
+
+    def declaration(self) -> EventDeclaration:
+        return EventDeclaration(
+            day=self.day,
+            sequence=self.sequence,
+            name=self.name,
+            metadata=self.metadata,
+        )
 
 
 class EventQueue:
@@ -76,6 +97,17 @@ class EventQueue:
     @property
     def history(self) -> tuple[ScheduledEvent, ...]:
         return tuple(self._history)
+
+    def pending_declarations(self) -> tuple[EventDeclaration, ...]:
+        """Return queued events without exposing non-serializable callbacks."""
+        return tuple(
+            event.declaration()
+            for event in sorted(self._queue, key=lambda item: (item.day, item.sequence))
+        )
+
+    def history_declarations(self) -> tuple[EventDeclaration, ...]:
+        """Return dispatched event declarations in deterministic order."""
+        return tuple(event.declaration() for event in self._history)
 
     def __len__(self) -> int:
         return len(self._queue)
