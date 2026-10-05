@@ -5,11 +5,12 @@
 
 ## Latest implementation milestone
 - Previous verified social-network milestone: 5e2fa3e68abb9f846a918c276958414f0706c669.
-- Current implementation tip: f2a2ae914609f3275e1701a79dee7b42f68aafdf (affiliation foundation; repair commit follows).
+- Current implementation tip: aad80611f086a4644a33f1a9d55719be907c0578.
 - GitHub Actions run #154 on main: SUCCESS.
 - The v0.8 prototype, deterministic branching/replay, yearly trajectories, individual cognitive agents, intervention exposure/adoption, event provenance and causal-link projections are implemented.
 - The social-network layer now extends from households into education, workplace and community institutions.
-- Multi-affiliation state is explicitly persisted per person and organization; this repair closes the missing entity/serialization integration.
+- Multi-affiliation state is explicitly persisted per person and organization; the missing entity/serialization integration was repaired in commit 95cddbe8100acf88ea5dabf05669ad31f480c5c1.
+- Institutional affiliations now follow life-course state: education closes after the school/education window, workplace membership tracks employment, and community membership persists; active intervals are preserved.
 
 ## What is actually implemented
 - Selectable simulated population sizes in the prototype.
@@ -36,5 +37,6 @@ Relationship parameters in this milestone are synthetic priors, not country-spec
 6. Validate the showable prototype end-to-end and keep the automated test suite green after every milestone.
 
 ## Progress estimate
-- Current engineering direction: approximately 47% of the eventual WORLD LAB vision; local validation is green, CI is pending for the latest lifecycle change.
+- Local validation at the latest tip: 78 tests passed.
+- Current engineering direction: approximately 47% of the eventual WORLD LAB vision. This remains an engineering estimate, not a scientific accuracy score; CI status must still be checked for the latest push.
 - This is an engineering estimate, not a scientific accuracy score.
