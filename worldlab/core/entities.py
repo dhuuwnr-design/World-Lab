@@ -21,6 +21,7 @@ class Person:
     money: float = 0.0
     health: float = 0.8
     education_years: float = 10.0
+    population_weight: float = 1.0
     preferences: Dict[str, float] = field(default_factory=dict)
 
 

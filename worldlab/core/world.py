@@ -2,8 +2,9 @@
 
 from dataclasses import dataclass, field
 import random
-from typing import Dict
+from typing import Dict, Optional
 
+from .demography import DemographicProfile, advance_demography
 from .entities import Household, Location, Organization, Person
 from .events import EventQueue
 
@@ -19,10 +20,17 @@ class World:
     households: Dict[int, Household] = field(default_factory=dict)
     organizations: Dict[int, Organization] = field(default_factory=dict)
     locations: Dict[int, Location] = field(default_factory=dict)
+    demographic_profile: Optional[DemographicProfile] = None
+    last_year_births: int = 0
+    last_year_deaths: int = 0
+    total_births: int = 0
+    total_deaths: int = 0
 
     def __post_init__(self) -> None:
         self.rng = random.Random(self.seed)
         self.events = EventQueue()
+        if self.demographic_profile is not None:
+            self.demographic_profile.validate()
 
     @property
     def year(self) -> int:
@@ -36,22 +44,32 @@ class World:
     def population(self) -> int:
         return len(self.people)
 
+    @property
+    def weighted_population(self) -> float:
+        """Estimated reference-population size represented by this world."""
+        return sum(person.population_weight for person in self.people.values())
+
     def advance_days(self, days: int) -> None:
         if days < 0:
             raise ValueError("days must be non-negative")
 
         target = self.day + days
         old_year_index = self.day // DAYS_PER_YEAR
-        self.events.run_until(target, self._dispatch_event)
+        new_year_index = target // DAYS_PER_YEAR
+
+        for year_index in range(old_year_index + 1, new_year_index + 1):
+            boundary_day = year_index * DAYS_PER_YEAR
+            self.events.run_until(boundary_day - 1, self._dispatch_event)
+            self.day = boundary_day
+            self._annual_processes()
+            self.events.run_until(boundary_day, self._dispatch_event)
+
+        if target > new_year_index * DAYS_PER_YEAR:
+            self.events.run_until(target, self._dispatch_event)
+
         self.day = target
 
-        new_year_index = self.day // DAYS_PER_YEAR
-        for _ in range(old_year_index, new_year_index):
-            self._annual_processes()
-
     def _dispatch_event(self, event) -> None:
-        # Events execute at their scheduled simulation day, not at the final
-        # target day of a large advance_days() call.
         previous_day = self.day
         self.day = event.day
         try:
@@ -62,6 +80,16 @@ class World:
     def _annual_processes(self) -> None:
         for person in self.people.values():
             person.age += 1
+
+        self.last_year_births = 0
+        self.last_year_deaths = 0
+
+        if self.demographic_profile is not None:
+            result = advance_demography(self, self.demographic_profile)
+            self.last_year_births = result.births
+            self.last_year_deaths = result.deaths
+            self.total_births += result.births
+            self.total_deaths += result.deaths
 
     def snapshot(self) -> dict:
         employed = sum(
@@ -77,9 +105,14 @@ class World:
             "day_of_year": self.day_of_year,
             "absolute_day": self.day,
             "population": self.population,
+            "weighted_population": self.weighted_population,
             "households": len(self.households),
             "organizations": len(self.organizations),
             "working_age_employment_rate": (
                 employed / working_age if working_age else 0.0
             ),
+            "births_last_year": self.last_year_births,
+            "deaths_last_year": self.last_year_deaths,
+            "total_births": self.total_births,
+            "total_deaths": self.total_deaths,
         }
