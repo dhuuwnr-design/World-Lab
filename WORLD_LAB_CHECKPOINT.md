@@ -1,40 +1,44 @@
-# WORLD LAB CHECKPOINT
+# WORLD LAB - Checkpoint
 
-## 2026-10-05 — v0.8 full deterministic world restore
+## Current branch
+- feature/v0.8-presentation-architecture
 
-### Verified repository state
-- Repository: `dhuuwnr-design/World-Lab`
-- Branch: `feature/v0.8-presentation-architecture`
-- Replay foundation CI: **success** for `863bda6ad317dd6d6b7791cd700ef6a8b2a41a3d`.
-- Latest implementation commit: `4f4264ad298b128e5b1da3367d0c14f43c2d7571`.
-- CI for `4f4264ad...`: **in progress** when this checkpoint was written; not yet verified green.
+## Latest verified milestone
+- Commit: ada2e161ec4d32b90177c502d9f8d50371e1b986
+- Message: Add deterministic world branching from checkpoints
+- CI: GitHub Actions run #136 - SUCCESS
+- Verified: 2026-10-05
 
-### Implemented
-- `World.state_dict()` serializes complete mutable core simulation state:
-  - people
-  - individual agents and bounded memories/beliefs
-  - social states
-  - households
-  - organizations
-  - locations
-  - relationships
-  - social contexts
-  - demographic profile
-  - simulation counters/time
-  - deterministic RNG state
-- `World.from_state_dict()` restores those structures and RNG state.
-- `ReplayCheckpoint.capture(world, identity)` now captures the complete mutable world state rather than only the aggregate snapshot.
-- `ReplayCheckpoint.restore_world()` restores a checkpoint when there are no pending runtime callbacks.
-- Added exact state restoration tests and checkpoint restoration tests.
-- Callback-free event declarations remain separate from runtime callbacks.
+## What is implemented
+- Persistent individual cognitive agents attached to simulated people.
+- Individual perception and decision contexts.
+- Annual lived-world learning.
+- Deterministic world state serialization and restoration.
+- Stable event-handler replay restoration.
+- Typed presentation/science contracts.
+- Event metadata and provenance/causal-link projection.
+- Deterministic branching from exact replay checkpoints.
+- Branch isolation and checkpoint round-trip regression tests.
 
-### Verification boundary
-The new restore path is designed to make the core world reproducible, but **pending scheduled callbacks are intentionally not restored yet**. A checkpoint with pending callbacks raises a clear error instead of silently producing an incorrect branch. Full event-handler restoration is the next required step before arbitrary mid-event checkpoints can branch.
+## Current architectural meaning
+WORLD LAB can now create an exact world state, preserve its identity, and fork independent histories from that state. This is the foundation for counterfactual civilization experiments.
 
-### Next implementation target
-1. Verify CI for `4f4264ad...`.
-2. Add deterministic event-handler registration keyed by stable event type/name so declared pending events can be restored without serializing Python callbacks.
-3. Implement explicit branch creation with parent branch, divergence day, scenario ID, seed and model version.
-4. Add selective technology/policy exposure to a population scope and connect exposure to individual decisions and declared consequence events.
-5. Run baseline/intervention trajectories and compare outcomes with uncertainty/provenance.
-6. Continue scaling the individual-agent model without requiring an LLM call per person/tick.
+## Next major build
+Implement the Intervention and Exposure Engine:
+1. Define interventions, technologies, and policies as explicit mechanisms.
+2. Define configurable population scopes: selected people, households, geography, fractions, and deterministic sampling.
+3. Define exposure, access, and adoption rules over time.
+4. Apply interventions deterministically to a branch without mutating its parent.
+5. Record provenance, evidence, uncertainty, and causal mechanism IDs.
+6. Compare baseline versus intervention branches through measurable divergence.
+7. Test deterministic replay, scope correctness, branch isolation, and long-horizon divergence.
+
+## Progress estimate
+This is an engineering roadmap estimate, not a measured scientific completeness score.
+- Current engine foundation: approximately 25-30% of the eventual WORLD LAB vision.
+- 50% milestone target: a usable civilization experiment core where a user can create a baseline, select a population scope, introduce an intervention, run years or generations, branch alternatives, and inspect explainable measurable divergence with uncertainty and provenance.
+- Full target: the above plus broad calibrated real-world systems, large-scale performance, geography, culture, economics, health, education, institutions, environment, migration feedbacks, validation against historical data, mature branching and replay, and the civilization-scale presentation layer.
+- Percentages must be revised as capabilities become concrete; they must never be presented as proof that the model is a replica of reality.
+
+## Continue rule
+When the user says Continue or Work on World Lab, inspect this checkpoint and the actual repository state first, verify the latest CI, then continue implementation from the next major build. Do not stop at a trivial code correction.
