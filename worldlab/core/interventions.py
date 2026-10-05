@@ -34,6 +34,25 @@ class PopulationScope:
             if any(int(value) < 0 for value in values):
                 raise ValueError(f"{name} must contain non-negative IDs")
 
+    def to_dict(self) -> dict:
+        return {
+            "person_ids": list(self.person_ids),
+            "household_ids": list(self.household_ids),
+            "location_ids": list(self.location_ids),
+            "organization_ids": list(self.organization_ids),
+            "fraction": self.fraction,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, object]) -> "PopulationScope":
+        return cls(
+            person_ids=tuple(int(value) for value in data.get("person_ids", ())),
+            household_ids=tuple(int(value) for value in data.get("household_ids", ())),
+            location_ids=tuple(int(value) for value in data.get("location_ids", ())),
+            organization_ids=tuple(int(value) for value in data.get("organization_ids", ())),
+            fraction=None if data.get("fraction") is None else float(data["fraction"]),
+        )
+
     def matches(self, person, *, seed: int) -> bool:
         explicit = any((self.person_ids, self.household_ids, self.location_ids, self.organization_ids))
         selected = (
@@ -69,6 +88,47 @@ class InterventionDefinition:
     belief_updates: Mapping[str, float] = field(default_factory=dict)
     evidence_references: tuple[str, ...] = ()
     uncertainty: Mapping[str, object] = field(default_factory=dict)
+
+    def to_dict(self) -> dict:
+        return {
+            "intervention_id": self.intervention_id,
+            "name": self.name,
+            "mechanism_id": self.mechanism_id,
+            "start_day": self.start_day,
+            "end_day": self.end_day,
+            "scope": self.scope.to_dict(),
+            "exposure_fraction": self.exposure_fraction,
+            "access_fraction": self.access_fraction,
+            "adoption_benefit": self.adoption_benefit,
+            "adoption_cost": self.adoption_cost,
+            "adoption_uncertainty": self.adoption_uncertainty,
+            "adoption_social_effect": self.adoption_social_effect,
+            "person_effects": dict(self.person_effects),
+            "belief_updates": dict(self.belief_updates),
+            "evidence_references": list(self.evidence_references),
+            "uncertainty": dict(self.uncertainty),
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, object]) -> "InterventionDefinition":
+        return cls(
+            intervention_id=str(data["intervention_id"]),
+            name=str(data["name"]),
+            mechanism_id=str(data["mechanism_id"]),
+            start_day=int(data["start_day"]),
+            end_day=None if data.get("end_day") is None else int(data["end_day"]),
+            scope=PopulationScope.from_dict(data.get("scope", {})),
+            exposure_fraction=float(data.get("exposure_fraction", 1.0)),
+            access_fraction=float(data.get("access_fraction", 1.0)),
+            adoption_benefit=float(data.get("adoption_benefit", 0.0)),
+            adoption_cost=float(data.get("adoption_cost", 0.0)),
+            adoption_uncertainty=float(data.get("adoption_uncertainty", 0.0)),
+            adoption_social_effect=float(data.get("adoption_social_effect", 0.0)),
+            person_effects=dict(data.get("person_effects", {})),
+            belief_updates=dict(data.get("belief_updates", {})),
+            evidence_references=tuple(data.get("evidence_references", ())),
+            uncertainty=dict(data.get("uncertainty", {})),
+        )
 
     def __post_init__(self) -> None:
         if not self.intervention_id.strip():

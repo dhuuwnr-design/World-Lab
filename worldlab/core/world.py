@@ -33,6 +33,9 @@ class World:
     def __post_init__(self) -> None:
         self.rng = random.Random(self.seed)
         self.events = EventQueue()
+        from .interventions import InterventionEngine
+        self.intervention_engine = InterventionEngine(seed=self.seed)
+        self.intervention_definitions = {}
         if self.demographic_profile is not None:
             self.demographic_profile.validate()
 
@@ -145,6 +148,49 @@ class World:
             reason=reason,
         )
 
+    def register_intervention(self, intervention) -> None:
+        """Persist an immutable intervention definition and prepare its stable event handler."""
+        existing = self.intervention_definitions.get(intervention.intervention_id)
+        if existing is not None and existing != intervention:
+            raise ValueError(f"intervention already registered: {intervention.intervention_id}")
+        self.intervention_definitions[intervention.intervention_id] = intervention
+        self._register_intervention_handler(intervention)
+
+    def _register_intervention_handler(self, intervention) -> None:
+        handler_id = f"intervention:{intervention.intervention_id}"
+        def apply_registered() -> None:
+            self.intervention_engine.apply(self, intervention, day=self.day)
+        self.events.register_handler(handler_id, apply_registered)
+
+    def register_intervention_handlers(self) -> None:
+        for intervention in self.intervention_definitions.values():
+            self._register_intervention_handler(intervention)
+
+    def schedule_intervention(self, intervention_id: str, *, day: int | None = None) -> None:
+        intervention = self.intervention_definitions.get(intervention_id)
+        if intervention is None:
+            raise KeyError(f"unknown intervention: {intervention_id}")
+        event_day = intervention.start_day if day is None else day
+        self.events.schedule(
+            event_day,
+            None,
+            name=f"intervention:{intervention_id}",
+            metadata=__import__("worldlab.core.events", fromlist=["EventMetadata"]).EventMetadata(
+                actor_ids=(f"intervention:{intervention_id}",),
+                mechanism_ids=(intervention.mechanism_id,),
+                effects={"intervention_id": intervention.intervention_id},
+                evidence_references=intervention.evidence_references,
+                uncertainty=intervention.uncertainty,
+            ),
+            handler_id=f"intervention:{intervention_id}",
+        )
+
+    def apply_intervention(self, intervention_id: str, *, day: int | None = None):
+        intervention = self.intervention_definitions.get(intervention_id)
+        if intervention is None:
+            raise KeyError(f"unknown intervention: {intervention_id}")
+        return self.intervention_engine.apply(self, intervention, day=day)
+
     def advance_days(self, days: int) -> None:
         if days < 0:
             raise ValueError("days must be non-negative")
@@ -219,6 +265,10 @@ class World:
             "total_births": self.total_births,
             "total_deaths": self.total_deaths,
             "rng_state": self.rng.getstate(),
+            "intervention_definitions": {
+                key: value.to_dict() for key, value in self.intervention_definitions.items()
+            },
+            "intervention_engine": self.intervention_engine.to_dict(),
         }
 
     @classmethod
@@ -296,6 +346,13 @@ class World:
             return tuple(as_tuple(item) for item in value) if isinstance(value, list) else value
 
         world.rng.setstate(as_tuple(state["rng_state"]))
+        from .interventions import InterventionDefinition, InterventionEngine
+        world.intervention_engine = InterventionEngine.from_dict(state.get("intervention_engine", {}))
+        world.intervention_definitions = {
+            key: InterventionDefinition.from_dict(raw)
+            for key, raw in state.get("intervention_definitions", {}).items()
+        }
+        world.register_intervention_handlers()
         return world
 
     def snapshot(self) -> dict:
