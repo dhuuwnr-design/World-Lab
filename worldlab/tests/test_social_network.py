@@ -6,18 +6,20 @@ from worldlab.core.interventions import InterventionDefinition, PopulationScope
 def test_relationships_change_perception():
     world = World(seed=21)
     generate_population(world, 20)
-    before = world.perception_for(1)["peer_belonging"]
-    world.people[2].social_state.belonging = 1.0
-    after = world.perception_for(1)["peer_belonging"]
+    person_id, peer_id = next(iter(world.relationships))
+    before = world.perception_for(person_id)["peer_belonging"]
+    world.people[peer_id].social_state.belonging = 1.0
+    after = world.perception_for(person_id)["peer_belonging"]
     assert after > before
 
 
 def test_adoption_signal_changes_when_peer_adopts():
     world = World(seed=22)
     generate_population(world, 20)
-    before = world.social_influence_for(1, "adoption")
-    world.people[2].agent.beliefs["adoption"] = 1.0
-    after = world.social_influence_for(1, "adoption")
+    person_id, peer_id = next(iter(world.relationships))
+    before = world.social_influence_for(person_id, "adoption")
+    world.people[peer_id].agent.beliefs["adoption"] = 1.0
+    after = world.social_influence_for(person_id, "adoption")
     assert after >= before
 
 
@@ -30,6 +32,7 @@ def test_intervention_uses_relationship_mediated_social_effect():
         adoption_benefit=0.5, adoption_social_effect=0.8,
     )
     world.register_intervention(intervention)
-    world.people[2].agent.beliefs["adoption"] = 1.0
+    peer_id = next(target for (source, target) in world.relationships if source == 1)
+    world.people[peer_id].agent.beliefs["adoption"] = 1.0
     records = world.apply_intervention("social-test")
     assert records and records[0].status in {"adopted", "declined"}

@@ -22,7 +22,7 @@ def test_households_have_explicit_social_relationships():
     assert world.relationships
     for (source, target), relationship in world.relationships.items():
         assert source != target
-        assert relationship.relationship_type == "household"
+        assert relationship.relationship_type in {"household", "education", "workplace", "community"}
         assert 0.0 <= relationship.closeness <= 1.0
         assert 0.0 <= relationship.trust <= 1.0
         assert (target, source) in world.relationships
