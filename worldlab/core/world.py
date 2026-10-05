@@ -8,6 +8,7 @@ from .agents import DecisionContext, IndividualAgent
 from .demography import DemographicProfile, advance_demography
 from .entities import Affiliation, Household, Location, Organization, Person
 from .environment import EnvironmentCell, annual_step, perception_signals
+from .geography import GeographyNode
 from .events import EventQueue
 from .lifecycle import advance_life_course
 from .multiplex import add as add_multiplex_relationship, remove_person_layer
@@ -26,6 +27,7 @@ class World:
     organizations: Dict[int, Organization] = field(default_factory=dict)
     locations: Dict[int, Location] = field(default_factory=dict)
     environment: Dict[int, EnvironmentCell] = field(default_factory=dict)
+    geography: Dict[int, GeographyNode] = field(default_factory=dict)
     relationships: Dict[tuple[int, int], Relationship] = field(default_factory=dict)
     multiplex_relationships: Dict[tuple[int, int, str], Relationship] = field(default_factory=dict)
     affiliations: Dict[int, Affiliation] = field(default_factory=dict)
@@ -405,6 +407,7 @@ class World:
             "organizations": {str(key): asdict(value) for key, value in self.organizations.items()},
             "locations": {str(key): asdict(value) for key, value in self.locations.items()},
             "environment": {str(key): asdict(value) for key, value in self.environment.items()},
+            "geography": {str(key): asdict(value) for key, value in self.geography.items()},
             "affiliations": {str(key): asdict(value) for key, value in self.affiliations.items()},
             "relationships": {
                 f"{left}:{right}": asdict(value)
@@ -464,6 +467,7 @@ class World:
         organizations = {int(key): Organization(**raw) for key, raw in state.get("organizations", {}).items()}
         locations = {int(key): Location(**raw) for key, raw in state.get("locations", {}).items()}
         environment = {int(key): EnvironmentCell(**raw) for key, raw in state.get("environment", {}).items()}
+        geography = {int(key): GeographyNode(**raw) for key, raw in state.get("geography", {}).items()}
         affiliations = {int(key): Affiliation(**raw) for key, raw in state.get("affiliations", {}).items()}
         relationships = {}
         for key, raw in state.get("relationships", {}).items():
@@ -501,6 +505,7 @@ class World:
             organizations=organizations,
             locations=locations,
             environment=environment,
+            geography=geography,
             relationships=relationships,
             multiplex_relationships=multiplex_relationships,
             affiliations=affiliations,
