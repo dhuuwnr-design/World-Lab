@@ -65,3 +65,6 @@ class Location:
     latitude: float
     longitude: float
     urban: bool = True
+    area_km2: float = 1.0
+    elevation_m: float = 0.0
+    climate_zone: str = "unknown"

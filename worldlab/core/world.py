@@ -7,6 +7,7 @@ from typing import Dict, Optional
 from .agents import DecisionContext, IndividualAgent
 from .demography import DemographicProfile, advance_demography
 from .entities import Affiliation, Household, Location, Organization, Person
+from .environment import EnvironmentCell, annual_step, perception_signals
 from .events import EventQueue
 from .lifecycle import advance_life_course
 from .multiplex import add as add_multiplex_relationship, remove_person_layer
@@ -24,6 +25,7 @@ class World:
     households: Dict[int, Household] = field(default_factory=dict)
     organizations: Dict[int, Organization] = field(default_factory=dict)
     locations: Dict[int, Location] = field(default_factory=dict)
+    environment: Dict[int, EnvironmentCell] = field(default_factory=dict)
     relationships: Dict[tuple[int, int], Relationship] = field(default_factory=dict)
     multiplex_relationships: Dict[tuple[int, int, str], Relationship] = field(default_factory=dict)
     affiliations: Dict[int, Affiliation] = field(default_factory=dict)
@@ -167,6 +169,7 @@ class World:
         )
         location = self.locations.get(person.location_id)
         social_context = self.social_contexts.get(person.location_id)
+        environment = self.environment.get(person.location_id)
 
         household_resources = 0.0
         housing_pressure = 0.0
@@ -211,6 +214,8 @@ class World:
             ),
             "location_urban": 1.0 if location is not None and location.urban else 0.0,
         }
+        if environment is not None:
+            signals.update(perception_signals(environment))
         if social_context is not None:
             signals.update(
                 {
@@ -310,6 +315,32 @@ class World:
         finally:
             self.day = previous_day
 
+    def _annual_environment_processes(self) -> None:
+        """Advance spatial environmental state using local human pressure."""
+        if not self.locations:
+            return
+        population_by_location: dict[int, float] = {}
+        organizations_by_location: dict[int, int] = {}
+        for person in self.people.values():
+            population_by_location[person.location_id] = (
+                population_by_location.get(person.location_id, 0.0) + person.population_weight
+            )
+        for organization in self.organizations.values():
+            organizations_by_location[organization.location_id] = (
+                organizations_by_location.get(organization.location_id, 0) + 1
+            )
+        for location_id, location in sorted(self.locations.items()):
+            cell = self.environment.setdefault(location_id, EnvironmentCell())
+            area = max(0.1, float(location.area_km2))
+            density = population_by_location.get(location_id, 0.0) / area
+            human_pressure = min(1.0, density / 1000.0)
+            built_pressure = min(1.0, organizations_by_location.get(location_id, 0) / 10.0)
+            annual_step(
+                cell,
+                human_pressure=human_pressure,
+                built_pressure=built_pressure,
+            )
+
     def _annual_processes(self) -> None:
         # Age and let each individual process the social environment once per
         # simulated year. Social learning is bounded and deterministic; it is
@@ -318,6 +349,7 @@ class World:
             person.age += 1
         self._annual_social_learning()
         advance_life_course(self)
+        self._annual_environment_processes()
         for person in self.people.values():
             if person.agent is not None:
                 person.agent.observe(f"year:{self.year}", self.perception_for(person.person_id))
@@ -372,6 +404,7 @@ class World:
             "households": {str(key): asdict(value) for key, value in self.households.items()},
             "organizations": {str(key): asdict(value) for key, value in self.organizations.items()},
             "locations": {str(key): asdict(value) for key, value in self.locations.items()},
+            "environment": {str(key): asdict(value) for key, value in self.environment.items()},
             "affiliations": {str(key): asdict(value) for key, value in self.affiliations.items()},
             "relationships": {
                 f"{left}:{right}": asdict(value)
@@ -430,6 +463,7 @@ class World:
         households = {int(key): Household(**raw) for key, raw in state.get("households", {}).items()}
         organizations = {int(key): Organization(**raw) for key, raw in state.get("organizations", {}).items()}
         locations = {int(key): Location(**raw) for key, raw in state.get("locations", {}).items()}
+        environment = {int(key): EnvironmentCell(**raw) for key, raw in state.get("environment", {}).items()}
         affiliations = {int(key): Affiliation(**raw) for key, raw in state.get("affiliations", {}).items()}
         relationships = {}
         for key, raw in state.get("relationships", {}).items():
@@ -466,6 +500,7 @@ class World:
             households=households,
             organizations=organizations,
             locations=locations,
+            environment=environment,
             relationships=relationships,
             multiplex_relationships=multiplex_relationships,
             affiliations=affiliations,
@@ -480,6 +515,8 @@ class World:
         def as_tuple(value):
             return tuple(as_tuple(item) for item in value) if isinstance(value, list) else value
 
+        for location_id in world.locations:
+            world.environment.setdefault(location_id, EnvironmentCell())
         world._ensure_multiplex_graph()
         world.rng.setstate(as_tuple(state["rng_state"]))
         from .interventions import InterventionDefinition, InterventionEngine
