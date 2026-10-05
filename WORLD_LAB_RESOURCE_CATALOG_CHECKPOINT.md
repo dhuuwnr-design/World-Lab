@@ -5,46 +5,37 @@ Branch: feature/v0.9-social-network-foundation
 
 ## Verified implementation
 
-The repository contains a provenance-first external resource registry and the first controlled ingestion contract:
+World Lab now has its first **actual external observation artifact** committed with provenance:
 
-- `worldlab/core/resource_catalog.py`
-- `worldlab/data/resources.json`
-- `worldlab/core/ingestion.py`
-- `worldlab/tests/test_resource_catalog.py`
-- `worldlab/tests/test_ingestion.py`
+- `worldlab/data/fixtures/noaa_daily_summaries_USC00457180_2024-01-01.json`
+- `worldlab/data/manifests/noaa_daily_summaries_USC00457180_2024-01-01.json`
+- `worldlab/tests/test_real_data_fixture.py`
 
-The catalog currently records 8 high-value sources:
+The fixture was retrieved from the official NOAA NCEI Access Data Service for station `USC00457180` on `2024-01-01`. The captured response contains TMAX 5.6 C, TMIN -2.2 C, SNOW 0.0 and SNWD 0.0.
 
-1. NASA Earthdata Search
-2. NOAA NCEI Web Services
-3. OpenStreetMap
-4. World Bank Data Catalog
-5. Mesa
-6. Mesa-Geo
-7. PCMDI Metrics
-8. FLAME GPU 2
+SHA-256 of the committed 100-byte response:
+`7b310087df7292d40b0d7b1f618511a44a6059777ff594338519c1d4ba83fd2b`
 
-The ingestion layer now provides:
-- immutable dataset manifests
-- SHA-256 content identity
-- an opt-in JSON fetch helper
-- NCEI-style observation -> EvidenceRecord conversion
-- offline fixtures for deterministic CI
+The acquisition URL, retrieval timestamp, dataset selection and checksum are stored in the manifest.
 
-## Truth conditions
+## Truth condition
 
-This milestone does NOT claim that NASA, NOAA, OSM or World Bank bulk datasets have been downloaded into the repository.
+This is the first **real data physically present in the repository** from the external resource catalog.
 
-A source is only `integrated` after its actual acquisition, checksum/version capture, transformation and validation have succeeded.
+It is deliberately tiny: one station, one day. It proves the acquisition/provenance pipeline without pretending that one observation is a calibrated representation of climate.
 
-The NCEI adapter is a real ingestion path, but the committed test uses a small recorded fixture rather than live NOAA data. This keeps CI reproducible and avoids silently depending on network availability.
+NOAA documents the Access Data Service as a REST API that can subset datasets by parameters and return JSON, CSV, SSV, PDF or NetCDF depending on the dataset. citeturn0search0turn0search1
 
-NOAA's official Access Data Service supports REST retrieval and can return JSON/CSV/NetCDF depending on dataset and parameters. citeturn0search0turn0search4
+## Current state
 
-NASA's CMR provides programmatic discovery and metadata for Earth science holdings, which will be the basis for the NASA adapter rather than scraping pages. citeturn0search8
-
-OpenStreetMap provides regional/bulk extraction paths; the full world should not be committed to Git. citeturn0search5turn0search7
+- Real source registry: 🟢
+- Controlled ingestion contract: 🟢
+- Real NOAA observation committed: 🟢
+- SHA-256 provenance verification: 🟢
+- Geographic mapping of this station: 🔴
+- Large-scale real-world ingestion: 🔴
+- NASA adapter: 🔵 planned
 
 ## Next milestone
 
-Build source-specific NASA/NOAA acquisition manifests and then a first real downloaded sample with recorded provenance, checksum, license and geographic mapping.
+Build station/geospatial metadata ingestion so observations can map to World Lab `Location`/`GeographyNode` and then drive the Reality/Environment layer without inventing coordinates.

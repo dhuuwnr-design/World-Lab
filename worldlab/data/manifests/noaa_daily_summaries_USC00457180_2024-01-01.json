@@ -1,0 +1,10 @@
+{
+  "resource_id": "noaa-ncei-web-services",
+  "dataset_id": "daily-summaries",
+  "source_uri": "https://www.ncei.noaa.gov/access/services/data/v1?dataset=daily-summaries&stations=USC00457180&startDate=2024-01-01&endDate=2024-01-01&format=json&units=metric",
+  "retrieved_at": "2026-10-05T10:05:43Z",
+  "content_sha256": "7b310087df7292d40b0d7b1f618511a44a6059777ff594338519c1d4ba83fd2b",
+  "content_type": "application/json",
+  "source_version": "",
+  "selection": "station USC00457180; date 2024-01-01; dataset daily-summaries; metric units"
+}
