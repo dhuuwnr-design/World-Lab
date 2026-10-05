@@ -135,3 +135,33 @@ def test_multiplex_relationships_survive_round_trip():
         for key, relationship in restored.multiplex_relationships.items()
     }
     assert after == before
+
+
+def test_multiplex_social_influence_has_diminishing_returns_per_neighbor():
+    world = World(seed=31)
+    generate_population(world, 80)
+    pair = next(
+        (source, target)
+        for source, target, _layer in world.multiplex_relationships
+        if sum(1 for s, t, _ in world.multiplex_relationships if s == source and t == target) == 1
+    )
+    source, target = pair
+    world.people[target].agent.beliefs["adoption"] = 1.0
+    baseline = world.social_influence_for(source, "adoption")
+    existing = next(
+        relationship for (s, t, _), relationship in world.multiplex_relationships.items()
+        if s == source and t == target
+    )
+    from worldlab.core.social import Relationship
+    world.add_relationship(Relationship(
+        source_id=source,
+        target_id=target,
+        relationship_type="test-context",
+        closeness=existing.closeness,
+        trust=existing.trust,
+        contact_frequency=existing.contact_frequency,
+        conflict=existing.conflict,
+    ))
+    expanded = world.social_influence_for(source, "adoption")
+    assert expanded >= baseline
+    assert expanded < min(1.0, 2.0 * baseline) or baseline == 0.0

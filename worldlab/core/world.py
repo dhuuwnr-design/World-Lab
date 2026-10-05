@@ -103,18 +103,28 @@ class World:
             add_multiplex_relationship(self.multiplex_relationships, relationship)
 
     def social_influence_for(self, person_id: int, signal: str) -> float:
-        """Calculate a bounded peer signal from explicit relationship ties."""
+        """Calculate bounded peer influence with diminishing returns across layers.
+
+        Multiple contexts with the same neighbor are one social relationship
+        for normalization purposes. Additional layers can strengthen influence,
+        but cannot count the same person repeatedly as independent people.
+        """
         person = self.people.get(person_id)
         if person is None:
             raise KeyError(f"unknown person_id: {person_id}")
-        numerator = denominator = 0.0
-        graph = self.multiplex_relationships or {(source, target, relationship.relationship_type): relationship for (source, target), relationship in self.relationships.items()}
+
+        graph = self.multiplex_relationships or {
+            (source, target, relationship.relationship_type): relationship
+            for (source, target), relationship in self.relationships.items()
+        }
+        by_neighbor: dict[int, list[Relationship]] = {}
         for (source, target, _layer), relationship in sorted(graph.items()):
-            if source != person_id:
-                continue
-            other = self.people.get(target)
-            if other is None:
-                continue
+            if source == person_id and target in self.people:
+                by_neighbor.setdefault(target, []).append(relationship)
+
+        numerator = denominator = 0.0
+        for target, relationships in sorted(by_neighbor.items()):
+            other = self.people[target]
             if signal == "adoption":
                 value = other.agent.beliefs.get("adoption", 0.0) if other.agent else 0.0
             else:
@@ -123,10 +133,22 @@ class World:
                 value = float(getattr(other.social_state, signal))
                 if signal == "affect_valence":
                     value = (value + 1.0) / 2.0
-            tie = relationship.closeness * relationship.contact_frequency * relationship.trust
-            tie *= 1.0 - 0.5 * relationship.conflict
-            numerator += tie * value
-            denominator += tie
+
+            layer_ties = []
+            for relationship in relationships:
+                tie = relationship.closeness * relationship.contact_frequency * relationship.trust
+                tie *= 1.0 - 0.5 * relationship.conflict
+                layer_ties.append(max(0.0, min(1.0, tie)))
+
+            # Saturating union: a second context adds influence without
+            # pretending the same neighbor is a second independent person.
+            combined_tie = 1.0
+            for tie in layer_ties:
+                combined_tie *= 1.0 - tie
+            combined_tie = 1.0 - combined_tie
+            numerator += combined_tie * value
+            denominator += combined_tie
+
         if denominator == 0.0:
             return 0.0
         normalized = numerator / denominator
