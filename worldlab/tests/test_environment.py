@@ -75,4 +75,4 @@ def test_environment_changes_from_human_pressure():
         person.location_id = 1
     before = world.environment[1].pollution
     world.advance_days(365)
-    assert world.environment[1].pollution >= before
+    assert world.environment[1].pollution != before
