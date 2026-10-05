@@ -2,6 +2,7 @@
 """Zero-dependency local server for the WORLD LAB showable prototype."""
 from __future__ import annotations
 import json
+import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from worldlab.core.interventions import InterventionDefinition, PopulationScope
@@ -46,4 +47,7 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as exc: self.send_json(400,{"error":str(exc)})
     def log_message(self,*args): return
 if __name__=="__main__":
-    print("WORLD LAB prototype: http://127.0.0.1:8765"); ThreadingHTTPServer(("127.0.0.1",8765),Handler).serve_forever()
+    host = os.environ.get("WORLDLAB_HOST", "127.0.0.1")
+    port = int(os.environ.get("PORT", os.environ.get("WORLDLAB_PORT", "8765")))
+    print(f"WORLD LAB prototype: http://{host}:{port}")
+    ThreadingHTTPServer((host,port),Handler).serve_forever()
