@@ -2,7 +2,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from worldlab.core.ingestion import manifest_for_response, ncei_json_to_evidence
+from worldlab.core.ingestion import ncei_json_to_evidence
 
 
 FIXTURE = Path(__file__).parents[1] / "data" / "fixtures" / "noaa_daily_summaries_USC00457180_2024-01-01.json"
@@ -17,9 +17,10 @@ def test_real_noaa_fixture_matches_recorded_sha256():
 
 def test_real_noaa_fixture_maps_to_evidence():
     payload = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     records = ncei_json_to_evidence(
         payload,
-        source_uri=manifest_url := json.loads(MANIFEST.read_text(encoding="utf-8"))["source_uri"],
+        source_uri=manifest["source_uri"],
         dataset_id="daily-summaries",
     )
     assert records[0].observed_at == "2024-01-01"

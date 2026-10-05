@@ -1,0 +1,10 @@
+{
+  "resource_id": "noaa-ncei-web-services",
+  "dataset_id": "station-metadata",
+  "source_uri": "https://www.ncdc.noaa.gov/cdo-web/datasets/GHCND/stations/GHCND%3AUSC00457180/detail",
+  "retrieved_at": "2026-10-05T10:09:00Z",
+  "content_sha256": "6bdc9a8244943bfe8fa683a76874ed0c5ef30ff31f0147a666cd154b4e2061f3",
+  "content_type": "application/json",
+  "source_version": "",
+  "selection": "GHCND station USC00457180; Rosalia, Washington; coordinates/elevation"
+}
