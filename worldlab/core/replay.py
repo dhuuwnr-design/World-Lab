@@ -8,6 +8,7 @@ import json
 from typing import Any, Mapping
 
 from .events import EventDeclaration, EventMetadata
+from .world import World
 from ..presentation.contracts import ReplayIdentity
 
 
@@ -20,12 +21,10 @@ def _jsonable(value: Any) -> Any:
 
 
 def canonical_json(value: Any) -> str:
-    """Produce stable JSON used for reproducibility fingerprints."""
     return json.dumps(_jsonable(value), sort_keys=True, separators=(",", ":"), ensure_ascii=True)
 
 
 def state_digest(state: Mapping[str, Any]) -> str:
-    """Hash a JSON-compatible state without depending on dictionary insertion order."""
     return hashlib.sha256(canonical_json(state).encode("utf-8")).hexdigest()
 
 
@@ -62,16 +61,34 @@ def event_declaration_from_dict(data: Mapping[str, Any]) -> EventDeclaration:
 
 @dataclass(frozen=True)
 class ReplayCheckpoint:
-    """Minimal deterministic identity plus world state and event declarations."""
+    """Deterministic identity plus complete mutable world state."""
 
     identity: ReplayIdentity
     world_state: Mapping[str, Any]
     pending_events: tuple[EventDeclaration, ...] = ()
     history_events: tuple[EventDeclaration, ...] = ()
 
+    @classmethod
+    def capture(cls, world: World, identity: ReplayIdentity) -> "ReplayCheckpoint":
+        return cls(
+            identity=identity,
+            world_state=world.state_dict(),
+            pending_events=world.events.pending_declarations(),
+            history_events=world.events.history_declarations(),
+        )
+
     @property
     def world_state_digest(self) -> str:
         return state_digest(self.world_state)
+
+    def restore_world(self) -> World:
+        """Restore the core world state; runtime callbacks remain intentionally absent."""
+        if self.pending_events:
+            raise ValueError(
+                "checkpoint contains pending callbacks; register deterministic handlers "
+                "before restoring scheduled events"
+            )
+        return World.from_state_dict(dict(self.world_state))
 
     def to_dict(self) -> dict[str, Any]:
         return {

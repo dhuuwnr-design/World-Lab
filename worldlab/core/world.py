@@ -1,6 +1,6 @@
 """WORLD LAB core state and deterministic simulation loop."""
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 import random
 from typing import Dict, Optional
 
@@ -59,11 +59,6 @@ class World:
         return value / (value + scale)
 
     def perception_for(self, person_id: int) -> dict[str, float]:
-        """Build a provisional bounded perception from currently simulated state.
-
-        These transforms are mechanics for the agent interface, not calibrated
-        claims about human psychology. Calibration belongs in the evidence layer.
-        """
         person = self.people.get(person_id)
         if person is None:
             raise KeyError(f"unknown person_id: {person_id}")
@@ -80,10 +75,7 @@ class World:
         household_resources = 0.0
         housing_pressure = 0.0
         if household is not None:
-            household_resources = self._saturating(
-                household.money,
-                10000.0,
-            )
+            household_resources = self._saturating(household.money, 10000.0)
             housing_pressure = self._saturating(
                 household.housing_cost,
                 max(1.0, household.money + household.housing_cost),
@@ -181,10 +173,7 @@ class World:
         for person in self.people.values():
             person.age += 1
             if person.agent is not None:
-                person.agent.observe(
-                    f"year:{self.year}",
-                    self.perception_for(person.person_id),
-                )
+                person.agent.observe(f"year:{self.year}", self.perception_for(person.person_id))
         self.last_year_births = 0
         self.last_year_deaths = 0
         if self.demographic_profile is not None:
@@ -206,6 +195,108 @@ class World:
                     "wellbeing", "stress", "loneliness", "belonging", "trust"
                 )},
             )
+
+    def state_dict(self) -> dict:
+        """Serialize complete mutable core state, excluding runtime callbacks."""
+        return {
+            "seed": self.seed,
+            "start_year": self.start_year,
+            "day": self.day,
+            "people": {str(key): asdict(value) for key, value in self.people.items()},
+            "households": {str(key): asdict(value) for key, value in self.households.items()},
+            "organizations": {str(key): asdict(value) for key, value in self.organizations.items()},
+            "locations": {str(key): asdict(value) for key, value in self.locations.items()},
+            "relationships": {
+                f"{left}:{right}": asdict(value)
+                for (left, right), value in self.relationships.items()
+            },
+            "social_contexts": {str(key): asdict(value) for key, value in self.social_contexts.items()},
+            "demographic_profile": (
+                asdict(self.demographic_profile) if self.demographic_profile is not None else None
+            ),
+            "last_year_births": self.last_year_births,
+            "last_year_deaths": self.last_year_deaths,
+            "total_births": self.total_births,
+            "total_deaths": self.total_deaths,
+            "rng_state": self.rng.getstate(),
+        }
+
+    @classmethod
+    def from_state_dict(cls, state: dict) -> "World":
+        """Restore mutable core state exactly, without restoring runtime callbacks."""
+        from .demography import AgeRate
+
+        def restore_agent(data: dict | None) -> IndividualAgent | None:
+            if data is None:
+                return None
+            memory = data.get("memory", {})
+            from .agents import AgentMemory
+            return IndividualAgent(
+                agent_id=data["agent_id"],
+                seed=int(data["seed"]),
+                goals=dict(data.get("goals", {})),
+                beliefs=dict(data.get("beliefs", {})),
+                risk_tolerance=float(data.get("risk_tolerance", 0.5)),
+                social_sensitivity=float(data.get("social_sensitivity", 0.5)),
+                memory=AgentMemory(
+                    recent_events=list(memory.get("recent_events", [])),
+                    learned_beliefs=dict(memory.get("learned_beliefs", {})),
+                    max_recent_events=int(memory.get("max_recent_events", 32)),
+                ),
+            )
+
+        people = {}
+        for key, raw in state.get("people", {}).items():
+            raw = dict(raw)
+            raw["social_state"] = __import__("worldlab.core.social", fromlist=["SocialState"]).SocialState(**raw["social_state"])
+            raw["agent"] = restore_agent(raw.get("agent"))
+            people[int(key)] = Person(**raw)
+
+        households = {int(key): Household(**raw) for key, raw in state.get("households", {}).items()}
+        organizations = {int(key): Organization(**raw) for key, raw in state.get("organizations", {}).items()}
+        locations = {int(key): Location(**raw) for key, raw in state.get("locations", {}).items()}
+        relationships = {}
+        for key, raw in state.get("relationships", {}).items():
+            left, right = (int(part) for part in key.split(":", 1))
+            relationships[(left, right)] = Relationship(**raw)
+        social_contexts = {
+            int(key): SocialContext(**raw)
+            for key, raw in state.get("social_contexts", {}).items()
+        }
+
+        profile_data = state.get("demographic_profile")
+        profile = None
+        if profile_data is not None:
+            profile = DemographicProfile(
+                mortality=tuple(AgeRate(**item) for item in profile_data.get("mortality", [])),
+                fertility=tuple(AgeRate(**item) for item in profile_data.get("fertility", [])),
+                female_min_age=int(profile_data.get("female_min_age", 15)),
+                female_max_age=int(profile_data.get("female_max_age", 49)),
+                male_probability_at_birth=float(profile_data.get("male_probability_at_birth", 0.5)),
+            )
+
+        world = cls(
+            seed=int(state["seed"]),
+            start_year=int(state["start_year"]),
+            day=int(state["day"]),
+            people=people,
+            households=households,
+            organizations=organizations,
+            locations=locations,
+            relationships=relationships,
+            social_contexts=social_contexts,
+            demographic_profile=profile,
+            last_year_births=int(state.get("last_year_births", 0)),
+            last_year_deaths=int(state.get("last_year_deaths", 0)),
+            total_births=int(state.get("total_births", 0)),
+            total_deaths=int(state.get("total_deaths", 0)),
+        )
+
+        def as_tuple(value):
+            return tuple(as_tuple(item) for item in value) if isinstance(value, list) else value
+
+        world.rng.setstate(as_tuple(state["rng_state"]))
+        return world
 
     def snapshot(self) -> dict:
         employed = sum(1 for p in self.people.values() if 18 <= p.age <= 65 and p.employed)
