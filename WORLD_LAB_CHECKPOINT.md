@@ -1,37 +1,42 @@
 # WORLD LAB CHECKPOINT
 
-## 2026-10-05 — v0.8 individual-intelligence integration
+## 2026-10-05 — v0.8 individual intelligence: explicit perception context
 
 ### Verified repository state
 - Repository: `dhuuwnr-design/World-Lab`
 - Branch: `feature/v0.8-presentation-architecture`
-- Latest implementation commit: `fc801911dbe7e6e7a6c5e7f6a481866e864ed4e9`
-- Previous agent integration commit: `718b98e910a105dd102fce8b2b849caf21254a6d`
-- CI for `718b98e...`: completed successfully.
-- CI for `fc801911...`: queued when this checkpoint was written; not yet verified green.
+- Latest implementation commit: `5dbab2fbd7abc443a58d52effe29aa49155be3c2`
+- Previous implementation: `fc801911dbe7e6e7a6c5e7f6a481866e864ed4e9`
+- CI for `fc801911...`: completed successfully.
+- CI for `5dbab2f...`: in progress when this checkpoint was written; not yet verified green.
 
 ### Implemented
-- `worldlab/core/agents.py`: deterministic individual cognitive agent with:
-  - persistent goals and beliefs
-  - risk tolerance and social sensitivity
-  - bounded event memory
-  - perception normalization
-  - deterministic action scoring
-  - learning/observation
-- `Person.agent`: optional persistent individual agent.
-- Population generation creates an individual agent for every generated person.
-- Annual simulation now feeds each agent a yearly lived-state observation.
-- Social experiences are also recorded into the person's agent memory/beliefs.
-- Regression tests cover differentiated decisions, bounded perception, memory/learning, and annual world-to-agent feedback.
+- `worldlab/core/agents.py`
+  - Added explicit immutable `Perception` structure.
+  - Added explicit `DecisionContext` structure joining perception, candidate actions and decision reason.
+  - Added `IndividualAgent.perceive_context()` and `IndividualAgent.decide()` while preserving the existing `choose()` API.
+- `worldlab/core/world.py`
+  - Added `World.perception_for(person_id)`.
+  - A person's perception now draws from currently simulated individual, household, relationship, organization, location and social-context state.
+  - Signals are bounded to [0,1] before reaching the individual agent.
+  - Added `World.decision_context_for()` for reproducible structured decisions.
+  - Annual learning now records the richer current perception rather than wellbeing alone.
+- `worldlab/tests/test_agent_perception.py`
+  - Covers bounded perception.
+  - Covers structured decision context.
+  - Covers richer world-to-person perception.
+  - Covers deterministic repeated context construction.
 
 ### Scientific boundary
-This is an individual decision-model primitive, not a claim of consciousness or exact human psychology. Country, class, culture, institutions, relationships and life history must remain contextual mechanisms rather than deterministic personality stereotypes.
+The new transforms are interface mechanics, not calibrated claims about human psychology. Financial saturation constants and bounded mappings are provisional until evidence/calibration work assigns justified parameters. Country, class, culture, institutions, relationships and life history remain contextual mechanisms rather than deterministic personality stereotypes.
 
 ### Next implementation target
-After CI verification:
-1. Add explicit `Perception` / `DecisionContext` structures so agents receive world, household, social and economic signals rather than a single wellbeing value.
-2. Add action consequences as explicit world events with declared metadata.
-3. Make intervention/technology exposure selective by population scope.
-4. Build deterministic scenario branching/replay from serializable state checkpoints.
-5. Compare baseline vs intervention trajectories and preserve uncertainty/provenance.
-6. Keep routine agents lightweight; reserve deeper reasoning for selected agents/experiments rather than invoking an LLM for every person every tick.
+1. Verify CI for `5dbab2f...` and fix any regression before proceeding.
+2. Represent action consequences as explicit serializable world events with declared metadata.
+3. Add selective technology/policy exposure by population scope.
+4. Build deterministic serializable world checkpoints and scenario branching/replay.
+5. Compare baseline vs intervention trajectories with uncertainty/provenance.
+6. Keep routine agents lightweight; reserve deeper reasoning for selected agents/experiments.
+
+### Long-term WORLD LAB direction
+Each simulated person remains an individual decision-maker with persistent memory, beliefs, goals, constraints and social context. The simulation should produce multi-year and multi-generation outcomes from interacting individuals and institutions, rather than directly assigning population-level outcomes.
