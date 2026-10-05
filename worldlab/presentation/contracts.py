@@ -8,7 +8,7 @@ simulation or invent causal explanations.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
-from typing import Any, Mapping
+from typing import Any, Mapping, get_type_hints, get_origin, get_args
 
 
 def _clean(value: Any) -> Any:
@@ -182,8 +182,54 @@ def to_dict(contract: Any) -> dict[str, Any]:
     return _clean(asdict(contract))
 
 
+def _restore(value: Any, annotation: Any) -> Any:
+    """Recursively restore typed tuples and nested dataclasses."""
+    if value is None:
+        return None
+    origin = get_origin(annotation)
+    args = get_args(annotation)
+
+    if origin is tuple:
+        if len(args) == 2 and args[1] is Ellipsis:
+            return tuple(_restore(item, args[0]) for item in value)
+        if args:
+            return tuple(
+                _restore(item, item_type)
+                for item, item_type in zip(value, args)
+            )
+        return tuple(value)
+
+    if origin is list:
+        item_type = args[0] if args else Any
+        return [_restore(item, item_type) for item in value]
+
+    if origin is dict:
+        key_type, value_type = args if len(args) == 2 else (Any, Any)
+        return {
+            _restore(key, key_type): _restore(item, value_type)
+            for key, item in value.items()
+        }
+
+    if isinstance(annotation, type) and hasattr(annotation, "__dataclass_fields__"):
+        hints = get_type_hints(annotation)
+        return annotation(
+            **{
+                name: _restore(item, hints.get(name, Any))
+                for name, item in value.items()
+            }
+        )
+
+    return value
+
+
 def from_dict(contract_type: type[Any], data: Mapping[str, Any]) -> Any:
     """Rehydrate one of the presentation dataclasses from a mapping."""
     if not hasattr(contract_type, "__dataclass_fields__"):
         raise TypeError("contract_type must be a dataclass type")
-    return contract_type(**dict(data))
+    hints = get_type_hints(contract_type)
+    return contract_type(
+        **{
+            name: _restore(value, hints.get(name, Any))
+            for name, value in data.items()
+        }
+    )
