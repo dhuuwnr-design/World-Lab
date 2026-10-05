@@ -1,39 +1,23 @@
 # WORLD LAB CHECKPOINT
 
-## 2026-10-05 — v0.7 Evidence calibration foundation
+## 2026-10-05 — v0.8 presentation architecture
 
 ### Verified repository state
 - v0.5 cumulative demographic + representative-population engine is merged into main.
-- v0.6 human/social state exists on `feature/v0.6-human-social-state`.
-- v0.7 starts from commit `93f91dcb814be7edf952f8b6f145e6ce551ac62d`.
+- v0.6 human/social state exists on feature/v0.6-human-social-state.
+- v0.7 evidence-calibration foundation exists on feature/v0.7-evidence-calibration at commit 86586532196d2966e451045fa33120fe3b0a1ea7.
+- GitHub read access and repository admin/push permission for the connected account were verified on 2026-10-05.
+- The v0.8 branch starts from feature/v0.7-evidence-calibration.
 
-### Implemented in v0.7
-- `CalibrationProfile` for explicit region/year calibration inputs.
-- `EvidencePoint` storing value, source, year, unit and note for provenance.
-- Explicit adapters from normalized external indicators to social context.
-- Explicit indicator-to-parameter mapping; no hidden country heuristics.
-- Validation reports using normalized RMSE and relative absolute error.
-- Regression tests for provenance, transparent mapping, bounds and validation.
+### Implemented in this checkpoint
+- Defined three presentation modes: WORLD, LAB, SCIENCE.
+- Defined scale-aware world navigation from planet to person.
+- Defined Time Machine, Why Layer, People View, Meet the World, Branching Futures, and Reproducible Replay concepts.
+- Defined serializable contracts for world snapshots, entities, events, scenarios, branches, causal links, validation, and provenance.
+- Defined scientific-integrity rules for presentation and generated narrative.
 
-### Research/data contract
-UN World Population Prospects 2024 models demographic change through age/sex-specific fertility, mortality and net international migration and provides estimates/projections for 237 countries or areas. The simulation should ingest those quantities as external evidence rather than embedding country rates in engine code.
-World Bank's Indicators API provides programmatic access to nearly 16,000 time-series indicators and supports multi-indicator and date-range queries. It requires no API key.
+### Critical architecture rule
+Presentation is a view of simulation truth. It must not invent simulation facts or turn uncertain scenario outcomes into deterministic predictions.
 
-### Realism rules
-1. Country labels never directly determine personality or emotions.
-2. External indicators must retain source/year/unit provenance.
-3. Normalization must be explicit and testable.
-4. Simulation claims must distinguish mechanics, calibration fit and predictive validation.
-5. Held-out data must be used before calling a model realistic.
-6. Uncertainty should be preserved where source data provides it.
-
-### Not yet implemented
-- Live World Bank/UN ingestion inside the repository.
-- IPUMS microdata ingestion.
-- Country-specific social distributions.
-- Causal estimation of how indicators change individual states.
-- Held-out longitudinal validation.
-- Migration, education, health, labor, finance and media feedback loops.
-
-### Next target
-Build a source-ingestion layer that can fetch/store World Bank indicator observations with provenance, cache raw observations, normalize them explicitly, and feed calibration profiles. Then add UN demographic import and cross-check simulated age/sex totals against reference trajectories before adding richer causal sectors.
+### Next implementation target
+Implement the presentation data contracts as typed Python models, add serialization/regression tests, then build a minimal read-only presenter API/view over real simulation snapshots. After that, add branching/replay metadata and evidence-linked WHY explanations.
