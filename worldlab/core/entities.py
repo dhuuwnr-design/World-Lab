@@ -8,6 +8,16 @@ from .social import SocialState
 
 
 @dataclass
+class Affiliation:
+    affiliation_id: int
+    person_id: int
+    organization_id: int
+    role: str
+    active_from_day: int
+    active_to_day: Optional[int] = None
+
+
+@dataclass
 class Person:
     person_id: int
     age: int
@@ -22,6 +32,7 @@ class Person:
     education_years: float = 10.0
     population_weight: float = 1.0
     life_stage: str = "unknown"
+    affiliation_ids: List[int] = field(default_factory=list)
     social_state: SocialState = field(default_factory=SocialState)
     preferences: Dict[str, float] = field(default_factory=dict)
     agent: Optional[IndividualAgent] = None
@@ -42,6 +53,7 @@ class Organization:
     sector: str
     location_id: int
     employees: List[int] = field(default_factory=list)
+    member_ids: List[int] = field(default_factory=list)
     cash: float = 0.0
     capacity: float = 0.0
 

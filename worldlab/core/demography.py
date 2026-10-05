@@ -83,10 +83,14 @@ def advance_demography(world: "World", profile: DemographicProfile) -> Demograph
         household = world.households.get(person.household_id)
         if household and person_id in household.member_ids:
             household.member_ids.remove(person_id)
+        for affiliation_id in list(person.affiliation_ids):
+            world.affiliations.pop(affiliation_id, None)
         if person.organization_id is not None:
             organization = world.organizations.get(person.organization_id)
             if organization and person_id in organization.employees:
                 organization.employees.remove(person_id)
+            if organization and person_id in organization.member_ids:
+                organization.member_ids.remove(person_id)
         for key in [key for key in world.relationships if person_id in key]:
             del world.relationships[key]
 

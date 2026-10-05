@@ -66,3 +66,12 @@ def test_people_can_have_multiple_active_institution_affiliations():
         for aid in person.affiliation_ids
     }
     assert len(sectors) >= 2
+
+
+def test_affiliations_survive_state_round_trip():
+    world = World(seed=26)
+    generate_population(world, 60)
+    assert world.affiliations
+    restored = World.from_state_dict(world.state_dict())
+    assert set(restored.affiliations) == set(world.affiliations)
+    assert any(person.affiliation_ids for person in restored.people.values())

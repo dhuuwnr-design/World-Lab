@@ -24,6 +24,7 @@ class World:
     organizations: Dict[int, Organization] = field(default_factory=dict)
     locations: Dict[int, Location] = field(default_factory=dict)
     relationships: Dict[tuple[int, int], Relationship] = field(default_factory=dict)
+    affiliations: Dict[int, Affiliation] = field(default_factory=dict)
     social_contexts: Dict[int, SocialContext] = field(default_factory=dict)
     demographic_profile: Optional[DemographicProfile] = None
     last_year_births: int = 0
@@ -309,6 +310,7 @@ class World:
             "households": {str(key): asdict(value) for key, value in self.households.items()},
             "organizations": {str(key): asdict(value) for key, value in self.organizations.items()},
             "locations": {str(key): asdict(value) for key, value in self.locations.items()},
+            "affiliations": {str(key): asdict(value) for key, value in self.affiliations.items()},
             "relationships": {
                 f"{left}:{right}": asdict(value)
                 for (left, right), value in self.relationships.items()
@@ -362,6 +364,7 @@ class World:
         households = {int(key): Household(**raw) for key, raw in state.get("households", {}).items()}
         organizations = {int(key): Organization(**raw) for key, raw in state.get("organizations", {}).items()}
         locations = {int(key): Location(**raw) for key, raw in state.get("locations", {}).items()}
+        affiliations = {int(key): Affiliation(**raw) for key, raw in state.get("affiliations", {}).items()}
         relationships = {}
         for key, raw in state.get("relationships", {}).items():
             left, right = (int(part) for part in key.split(":", 1))
@@ -391,6 +394,7 @@ class World:
             organizations=organizations,
             locations=locations,
             relationships=relationships,
+            affiliations=affiliations,
             social_contexts=social_contexts,
             demographic_profile=profile,
             last_year_births=int(state.get("last_year_births", 0)),

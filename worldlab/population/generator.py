@@ -78,6 +78,29 @@ def _create_institutions(world: World, rng: random.Random) -> None:
             next_org += 1
 
 
+def _add_affiliation(world: World, person_id: int, organization_id: int, role: str) -> int:
+    affiliation_id = max(world.affiliations, default=0) + 1
+    world.affiliations[affiliation_id] = Affiliation(
+        affiliation_id=affiliation_id,
+        person_id=person_id,
+        organization_id=organization_id,
+        role=role,
+        active_from_day=world.day,
+    )
+    world.people[person_id].affiliation_ids.append(affiliation_id)
+    organization = world.organizations[organization_id]
+    if person_id not in organization.member_ids:
+        organization.member_ids.append(person_id)
+    return affiliation_id
+
+
+def _create_initial_affiliations(world: World) -> None:
+    for organization in sorted(world.organizations.values(), key=lambda item: item.organization_id):
+        for person_id in list(organization.employees):
+            role = {"education": "student", "workplace": "worker", "community": "member"}.get(organization.sector, "member")
+            _add_affiliation(world, person_id, organization.organization_id, role)
+
+
 def generate_population(world: World, target_people: Union[int, PopulationSize]) -> int:
     population_size = target_people if isinstance(target_people, PopulationSize) else PopulationSize(mode="fixed", people=target_people)
     target = population_size.resolve()
@@ -136,4 +159,5 @@ def generate_population(world: World, target_people: Union[int, PopulationSize])
         elif 6 <= person.age <= 22:
             person.education_years = max(person.education_years, min(20.0, person.age - 5))
     _create_institutions(world, rng)
+    _create_initial_affiliations(world)
     return created

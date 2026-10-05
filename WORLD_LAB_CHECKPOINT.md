@@ -5,10 +5,11 @@
 
 ## Latest implementation milestone
 - Previous verified social-network milestone: 5e2fa3e68abb9f846a918c276958414f0706c669.
-- Current implementation tip: 84802c8be6180c162689c2fb3cb8f8018bc77975.
+- Current implementation tip: f2a2ae914609f3275e1701a79dee7b42f68aafdf (affiliation foundation; repair commit follows).
 - GitHub Actions run #154 on main: SUCCESS.
 - The v0.8 prototype, deterministic branching/replay, yearly trajectories, individual cognitive agents, intervention exposure/adoption, event provenance and causal-link projections are implemented.
 - The social-network layer now extends from households into education, workplace and community institutions.
+- Multi-affiliation state is explicitly persisted per person and organization; this repair closes the missing entity/serialization integration.
 
 ## What is actually implemented
 - Selectable simulated population sizes in the prototype.
@@ -35,5 +36,5 @@ Relationship parameters in this milestone are synthetic priors, not country-spec
 6. Validate the showable prototype end-to-end and keep the automated test suite green after every milestone.
 
 ## Progress estimate
-- Current engineering direction: approximately 45% of the eventual WORLD LAB vision.
+- Current engineering direction: approximately 46% of the eventual WORLD LAB vision, pending CI verification.
 - This is an engineering estimate, not a scientific accuracy score.
