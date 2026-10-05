@@ -1,15 +1,15 @@
-"""Deterministic, callback-free replay checkpoint primitives for WORLD LAB."""
+"""Deterministic replay, branching, and checkpoint primitives for WORLD LAB."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 import hashlib
 import json
-from typing import Any, Mapping
+from typing import Any, Mapping, Callable
 
 from .events import EventDeclaration, EventMetadata
 from .world import World
-from ..presentation.contracts import ReplayIdentity
+from ..presentation.contracts import ReplayIdentity, BranchRecord
 
 
 def _jsonable(value: Any) -> Any:
@@ -83,7 +83,7 @@ class ReplayCheckpoint:
     def world_state_digest(self) -> str:
         return state_digest(self.world_state)
 
-    def restore_world(self, *, event_handlers: Mapping[str, Any] | None = None) -> World:
+    def restore_world(self, *, event_handlers: Mapping[str, Callable] | None = None) -> World:
         """Restore world state and callback-free event declarations."""
         world = World.from_state_dict(dict(self.world_state))
         if self.pending_events or self.history_events:
@@ -125,10 +125,41 @@ class ReplayCheckpoint:
         return cls(
             identity=identity,
             world_state=dict(data["world_state"]),
-            pending_events=tuple(
-                event_declaration_from_dict(event) for event in data.get("pending_events", ())
-            ),
-            history_events=tuple(
-                event_declaration_from_dict(event) for event in data.get("history_events", ())
-            ),
+            pending_events=tuple(event_declaration_from_dict(event) for event in data.get("pending_events", ())),
+            history_events=tuple(event_declaration_from_dict(event) for event in data.get("history_events", ())),
         )
+
+    def branch(
+        self,
+        *,
+        branch_id: str,
+        scenario_id: str,
+        seed: int | None = None,
+        model_version: str | None = None,
+        input_snapshot: str | None = None,
+        evidence_snapshot: str | None = None,
+        event_handlers: Mapping[str, Callable] | None = None,
+    ) -> tuple[World, BranchRecord, "ReplayCheckpoint"]:
+        """Create an independent branch from this exact checkpoint."""
+        child_seed = self.identity.random_seed if seed is None else seed
+        child_identity = ReplayIdentity(
+            model_version=model_version or self.identity.model_version,
+            scenario_id=scenario_id,
+            parent_branch=self.identity.scenario_id,
+            random_seed=child_seed,
+            input_snapshot=input_snapshot or self.identity.input_snapshot,
+            evidence_snapshot=evidence_snapshot or self.identity.evidence_snapshot,
+        )
+        world = self.restore_world(event_handlers=event_handlers)
+        world.seed = child_seed
+        world.rng.seed(child_seed)
+        branch = BranchRecord(
+            branch_id=branch_id,
+            parent_branch_id=self.identity.scenario_id,
+            divergence_time=int(self.world_state["day"]),
+            scenario_id=scenario_id,
+            seed=child_seed,
+            model_version=child_identity.model_version,
+        )
+        checkpoint = ReplayCheckpoint.capture(world, child_identity)
+        return world, branch, checkpoint

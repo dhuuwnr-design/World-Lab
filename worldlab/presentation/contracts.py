@@ -1,27 +1,14 @@
-"""Typed presentation contracts for WORLD LAB.
-
-These models form the boundary between simulation truth and presentation.
-They are deliberately data-only: presentation code must not mutate the
-simulation or invent causal explanations.
-"""
-
+"""Typed presentation contracts for WORLD LAB."""
 from __future__ import annotations
-
 from dataclasses import asdict, dataclass, field
 from typing import Any, Mapping, get_type_hints, get_origin, get_args
 
-
 def _clean(value: Any) -> Any:
-    if isinstance(value, dict):
-        return {str(k): _clean(v) for k, v in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [_clean(v) for v in value]
+    if isinstance(value, dict): return {str(k): _clean(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)): return [_clean(v) for v in value]
     return value
 
-
-class ContractError(ValueError):
-    """Raised when a presentation contract is structurally invalid."""
-
+class ContractError(ValueError): pass
 
 @dataclass(frozen=True)
 class ProvenanceRecord:
@@ -32,13 +19,9 @@ class ProvenanceRecord:
     transformation: str | None = None
     ingestion_timestamp: str | None = None
     evidence_snapshot_id: str | None = None
-
-    def __post_init__(self) -> None:
-        if not self.source.strip():
-            raise ContractError("provenance source must not be empty")
-        if self.source_year is not None and self.source_year < 1900:
-            raise ContractError("source_year must be >= 1900")
-
+    def __post_init__(self):
+        if not self.source.strip(): raise ContractError("provenance source must not be empty")
+        if self.source_year is not None and self.source_year < 1900: raise ContractError("source_year must be >= 1900")
 
 @dataclass(frozen=True)
 class WorldSnapshot:
@@ -48,13 +31,9 @@ class WorldSnapshot:
     population: Mapping[str, Any] = field(default_factory=dict)
     systems: Mapping[str, Any] = field(default_factory=dict)
     uncertainty: Mapping[str, Any] = field(default_factory=dict)
-
-    def __post_init__(self) -> None:
-        if self.simulation_time < 0:
-            raise ContractError("simulation_time must be non-negative")
-        if self.year < 0:
-            raise ContractError("year must be non-negative")
-
+    def __post_init__(self):
+        if self.simulation_time < 0: raise ContractError("simulation_time must be non-negative")
+        if self.year < 0: raise ContractError("year must be non-negative")
 
 @dataclass(frozen=True)
 class EntitySnapshot:
@@ -63,13 +42,8 @@ class EntitySnapshot:
     attributes: Mapping[str, Any] = field(default_factory=dict)
     parent_id: str | None = None
     location_id: str | None = None
-
-    def __post_init__(self) -> None:
-        if not self.entity_id.strip():
-            raise ContractError("entity_id must not be empty")
-        if not self.entity_type.strip():
-            raise ContractError("entity_type must not be empty")
-
+    def __post_init__(self):
+        if not self.entity_id.strip() or not self.entity_type.strip(): raise ContractError("entity_id and entity_type must not be empty")
 
 @dataclass(frozen=True)
 class EventRecord:
@@ -80,13 +54,9 @@ class EventRecord:
     causes: tuple[str, ...] = ()
     effects: Mapping[str, Any] = field(default_factory=dict)
     provenance: tuple[ProvenanceRecord, ...] = ()
-
-    def __post_init__(self) -> None:
-        if not self.event_id.strip() or not self.event_type.strip():
-            raise ContractError("event_id and event_type must not be empty")
-        if self.simulation_time < 0:
-            raise ContractError("event simulation_time must be non-negative")
-
+    def __post_init__(self):
+        if not self.event_id.strip() or not self.event_type.strip(): raise ContractError("event_id and event_type must not be empty")
+        if self.simulation_time < 0: raise ContractError("simulation_time must be non-negative")
 
 @dataclass(frozen=True)
 class ScenarioDefinition:
@@ -100,13 +70,9 @@ class ScenarioDefinition:
     model_version: str = "unknown"
     evidence_snapshot_id: str | None = None
     parent_scenario_id: str | None = None
-
-    def __post_init__(self) -> None:
-        if not self.scenario_id.strip():
-            raise ContractError("scenario_id must not be empty")
-        if self.start_time < 0 or self.end_time < self.start_time:
-            raise ContractError("scenario time range is invalid")
-
+    def __post_init__(self):
+        if not self.scenario_id.strip(): raise ContractError("scenario_id must not be empty")
+        if self.start_time < 0 or self.end_time < self.start_time: raise ContractError("scenario time range is invalid")
 
 @dataclass(frozen=True)
 class BranchRecord:
@@ -116,13 +82,9 @@ class BranchRecord:
     scenario_id: str
     seed: int
     model_version: str
-
-    def __post_init__(self) -> None:
-        if not self.branch_id.strip() or not self.scenario_id.strip():
-            raise ContractError("branch_id and scenario_id must not be empty")
-        if self.divergence_time < 0:
-            raise ContractError("divergence_time must be non-negative")
-
+    def __post_init__(self):
+        if not self.branch_id.strip() or not self.scenario_id.strip(): raise ContractError("branch_id and scenario_id must not be empty")
+        if self.divergence_time < 0: raise ContractError("divergence_time must be non-negative")
 
 @dataclass(frozen=True)
 class CausalLink:
@@ -132,15 +94,10 @@ class CausalLink:
     evidence_references: tuple[str, ...] = ()
     uncertainty: Mapping[str, Any] = field(default_factory=dict)
     weight: float | None = None
-
-    def __post_init__(self) -> None:
-        if not self.source_id.strip() or not self.target_id.strip():
-            raise ContractError("causal endpoints must not be empty")
-        if not self.mechanism_id.strip():
-            raise ContractError("mechanism_id must not be empty")
-        if self.weight is not None and not 0.0 <= self.weight <= 1.0:
-            raise ContractError("causal weight must be within [0, 1]")
-
+    def __post_init__(self):
+        if not self.source_id.strip() or not self.target_id.strip(): raise ContractError("causal endpoints must not be empty")
+        if not self.mechanism_id.strip(): raise ContractError("mechanism_id must not be empty")
+        if self.weight is not None and not 0.0 <= self.weight <= 1.0: raise ContractError("causal weight must be within [0, 1]")
 
 @dataclass(frozen=True)
 class ValidationRecord:
@@ -151,13 +108,9 @@ class ValidationRecord:
     threshold: float
     validation_dataset: str
     status: str
-
-    def __post_init__(self) -> None:
-        if not self.metric.strip() or not self.validation_dataset.strip():
-            raise ContractError("validation metric and dataset must not be empty")
-        if self.threshold < 0 or self.error_metric < 0:
-            raise ContractError("validation error and threshold must be non-negative")
-
+    def __post_init__(self):
+        if not self.metric.strip() or not self.validation_dataset.strip(): raise ContractError("validation metric and dataset must not be empty")
+        if self.threshold < 0 or self.error_metric < 0: raise ContractError("validation error and threshold must be non-negative")
 
 @dataclass(frozen=True)
 class ReplayIdentity:
@@ -167,69 +120,31 @@ class ReplayIdentity:
     random_seed: int
     input_snapshot: str
     evidence_snapshot: str | None = None
-
-    def __post_init__(self) -> None:
-        if not self.model_version.strip() or not self.scenario_id.strip():
-            raise ContractError("model_version and scenario_id must not be empty")
-        if not self.input_snapshot.strip():
-            raise ContractError("input_snapshot must not be empty")
-
+    def __post_init__(self):
+        if not self.model_version.strip() or not self.scenario_id.strip(): raise ContractError("model_version and scenario_id must not be empty")
+        if not self.input_snapshot.strip(): raise ContractError("input_snapshot must not be empty")
 
 def to_dict(contract: Any) -> dict[str, Any]:
-    """Serialize a presentation contract to JSON-compatible primitives."""
-    if not hasattr(contract, "__dataclass_fields__"):
-        raise TypeError("contract must be a dataclass instance")
+    if not hasattr(contract, "__dataclass_fields__"): raise TypeError("contract must be a dataclass instance")
     return _clean(asdict(contract))
 
-
 def _restore(value: Any, annotation: Any) -> Any:
-    """Recursively restore typed tuples and nested dataclasses."""
-    if value is None:
-        return None
-    origin = get_origin(annotation)
-    args = get_args(annotation)
-
+    if value is None: return None
+    origin, args = get_origin(annotation), get_args(annotation)
     if origin is tuple:
-        if len(args) == 2 and args[1] is Ellipsis:
-            return tuple(_restore(item, args[0]) for item in value)
-        if args:
-            return tuple(
-                _restore(item, item_type)
-                for item, item_type in zip(value, args)
-            )
-        return tuple(value)
-
+        if len(args)==2 and args[1] is Ellipsis: return tuple(_restore(x,args[0]) for x in value)
+        return tuple(_restore(x,t) for x,t in zip(value,args)) if args else tuple(value)
     if origin is list:
-        item_type = args[0] if args else Any
-        return [_restore(item, item_type) for item in value]
-
+        return [_restore(x,args[0] if args else Any) for x in value]
     if origin is dict:
-        key_type, value_type = args if len(args) == 2 else (Any, Any)
-        return {
-            _restore(key, key_type): _restore(item, value_type)
-            for key, item in value.items()
-        }
-
-    if isinstance(annotation, type) and hasattr(annotation, "__dataclass_fields__"):
-        hints = get_type_hints(annotation)
-        return annotation(
-            **{
-                name: _restore(item, hints.get(name, Any))
-                for name, item in value.items()
-            }
-        )
-
+        kt,vt=args if len(args)==2 else (Any,Any)
+        return {_restore(k,kt):_restore(v,vt) for k,v in value.items()}
+    if isinstance(annotation,type) and hasattr(annotation,"__dataclass_fields__"):
+        hints=get_type_hints(annotation)
+        return annotation(**{n:_restore(v,hints.get(n,Any)) for n,v in value.items()})
     return value
 
-
 def from_dict(contract_type: type[Any], data: Mapping[str, Any]) -> Any:
-    """Rehydrate one of the presentation dataclasses from a mapping."""
-    if not hasattr(contract_type, "__dataclass_fields__"):
-        raise TypeError("contract_type must be a dataclass type")
-    hints = get_type_hints(contract_type)
-    return contract_type(
-        **{
-            name: _restore(value, hints.get(name, Any))
-            for name, value in data.items()
-        }
-    )
+    if not hasattr(contract_type, "__dataclass_fields__"): raise TypeError("contract_type must be a dataclass type")
+    hints=get_type_hints(contract_type)
+    return contract_type(**{n:_restore(v,hints.get(n,Any)) for n,v in data.items()})
