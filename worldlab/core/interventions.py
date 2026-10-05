@@ -197,7 +197,7 @@ class InterventionEngine:
             elif _unit_interval(f"access:{key}", self.seed) >= intervention.access_fraction:
                 status = "no_access"
             else:
-                status = self._decide_adoption(world, person.person_id, intervention)
+                status = self._decide_adoption(world, person.person_id, intervention, current_day)
                 if status == "adopted":
                     for field_name, delta in intervention.person_effects.items():
                         current = getattr(person, field_name)
@@ -210,7 +210,7 @@ class InterventionEngine:
         self.records.extend(batch)
         return tuple(batch)
 
-    def _decide_adoption(self, world: World, person_id: int, intervention: InterventionDefinition) -> str:
+    def _decide_adoption(self, world: World, person_id: int, intervention: InterventionDefinition, day: int) -> str:
         person = world.people[person_id]
         if person.agent is None:
             return "declined"
@@ -227,7 +227,7 @@ class InterventionEngine:
             },
             reason=f"intervention:{intervention.intervention_id}",
         )
-        return "adopted" if person.agent.decide(context) == "adopt" else "declined"
+        return "adopted" if person.agent.decide(context, day=day) == "adopt" else "declined"
 
     def to_dict(self) -> dict:
         return {
