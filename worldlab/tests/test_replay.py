@@ -22,7 +22,7 @@ def test_event_declaration_is_callback_free_and_round_trips():
         evidence_references=("evidence:1",),
         uncertainty={"adoption": {"low": 0.2, "high": 0.7}},
     )
-    world.events.schedule(10, lambda: None, name="adopt", metadata=metadata)
+    world.events.schedule(10, lambda: None, name="adopt", metadata=metadata, handler_id="technology.adopt")
     declaration = world.events.pending_declarations()[0]
     restored = event_declaration_from_dict(event_declaration_to_dict(declaration))
     assert restored == declaration
@@ -31,7 +31,7 @@ def test_event_declaration_is_callback_free_and_round_trips():
 
 def test_replay_checkpoint_round_trip_preserves_identity_and_events():
     world = World(seed=11)
-    world.events.schedule(4, lambda: None, name="event", metadata=EventMetadata())
+    world.events.schedule(4, lambda: None, name="event", metadata=EventMetadata(), handler_id="event.test")
     checkpoint = ReplayCheckpoint(
         identity=ReplayIdentity(
             model_version="v0.8",
@@ -106,3 +106,33 @@ def test_checkpoint_capture_restores_full_world_when_no_pending_callbacks():
     checkpoint = ReplayCheckpoint.capture(world, identity)
     restored = checkpoint.restore_world()
     assert restored.state_dict() == world.state_dict()
+
+
+def test_registered_event_handler_restores_pending_event_and_continues_deterministically():
+    world = World(seed=31)
+    original_calls = []
+    restored_calls = []
+    world.events.schedule(
+        5,
+        lambda: original_calls.append("fired"),
+        name="deterministic-event",
+        handler_id="test.event",
+    )
+    checkpoint = ReplayCheckpoint.capture(
+        world,
+        ReplayIdentity(
+            model_version="v0.8",
+            scenario_id="branch",
+            parent_branch="baseline",
+            random_seed=31,
+            input_snapshot="snapshot:branch",
+        ),
+    )
+    restored = checkpoint.restore_world(
+        event_handlers={"test.event": lambda: restored_calls.append("fired")}
+    )
+    world.advance_days(5)
+    restored.advance_days(5)
+    assert original_calls == ["fired"]
+    assert restored_calls == ["fired"]
+    assert restored.events.history_declarations() == world.events.history_declarations()

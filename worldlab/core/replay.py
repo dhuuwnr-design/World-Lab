@@ -33,6 +33,7 @@ def event_declaration_to_dict(event: EventDeclaration) -> dict[str, Any]:
         "day": event.day,
         "sequence": event.sequence,
         "name": event.name,
+        "handler_id": event.handler_id,
         "metadata": {
             "actor_ids": list(event.metadata.actor_ids),
             "mechanism_ids": list(event.metadata.mechanism_ids),
@@ -49,6 +50,7 @@ def event_declaration_from_dict(data: Mapping[str, Any]) -> EventDeclaration:
         day=int(data["day"]),
         sequence=int(data["sequence"]),
         name=str(data.get("name", "")),
+        handler_id=data.get("handler_id"),
         metadata=EventMetadata(
             actor_ids=tuple(metadata.get("actor_ids", ())),
             mechanism_ids=tuple(metadata.get("mechanism_ids", ())),
@@ -81,14 +83,18 @@ class ReplayCheckpoint:
     def world_state_digest(self) -> str:
         return state_digest(self.world_state)
 
-    def restore_world(self) -> World:
-        """Restore the core world state; runtime callbacks remain intentionally absent."""
-        if self.pending_events:
-            raise ValueError(
-                "checkpoint contains pending callbacks; register deterministic handlers "
-                "before restoring scheduled events"
-            )
-        return World.from_state_dict(dict(self.world_state))
+    def restore_world(self, *, event_handlers: Mapping[str, Any] | None = None) -> World:
+        """Restore world state and callback-free event declarations."""
+        world = World.from_state_dict(dict(self.world_state))
+        if self.pending_events or self.history_events:
+            if event_handlers is None:
+                raise ValueError(
+                    "checkpoint contains events; provide stable event_handlers to restore them"
+                )
+            for handler_id, callback in event_handlers.items():
+                world.events.register_handler(handler_id, callback)
+            world.events.restore_declarations(self.pending_events, self.history_events)
+        return world
 
     def to_dict(self) -> dict[str, Any]:
         return {

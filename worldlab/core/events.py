@@ -32,12 +32,15 @@ class EventDeclaration:
     sequence: int
     name: str
     metadata: EventMetadata
+    handler_id: str | None = None
 
     def __post_init__(self) -> None:
         if self.day < 0:
             raise ValueError("event day must be non-negative")
         if self.sequence < 1:
             raise ValueError("event sequence must be positive")
+        if self.handler_id is not None and not self.handler_id.strip():
+            raise ValueError("handler_id must not be empty")
 
 
 @dataclass(order=True)
@@ -47,6 +50,7 @@ class ScheduledEvent:
     callback: Callable = field(compare=False)
     name: str = field(default="", compare=False)
     metadata: EventMetadata = field(default_factory=EventMetadata, compare=False)
+    handler_id: str | None = field(default=None, compare=False)
 
     def declaration(self) -> EventDeclaration:
         return EventDeclaration(
@@ -54,6 +58,7 @@ class ScheduledEvent:
             sequence=self.sequence,
             name=self.name,
             metadata=self.metadata,
+            handler_id=self.handler_id,
         )
 
 
@@ -62,6 +67,17 @@ class EventQueue:
         self._queue: List[ScheduledEvent] = []
         self._sequence = 0
         self._history: List[ScheduledEvent] = []
+        self._handlers: dict[str, Callable] = {}
+
+    def register_handler(self, handler_id: str, callback: Callable) -> None:
+        if not handler_id.strip():
+            raise ValueError("handler_id must not be empty")
+        if not callable(callback):
+            raise TypeError("event handler must be callable")
+        existing = self._handlers.get(handler_id)
+        if existing is not None and existing is not callback:
+            raise ValueError(f"event handler already registered: {handler_id}")
+        self._handlers[handler_id] = callback
 
     def schedule(
         self,
@@ -69,9 +85,21 @@ class EventQueue:
         callback: Callable,
         name: str = "",
         metadata: EventMetadata | None = None,
+        *,
+        handler_id: str | None = None,
     ) -> None:
         if day < 0:
             raise ValueError("event day must be non-negative")
+        if handler_id is not None:
+            if not handler_id.strip():
+                raise ValueError("handler_id must not be empty")
+            if callback is not None:
+                self.register_handler(handler_id, callback)
+            callback = self._handlers.get(handler_id)
+            if callback is None:
+                raise KeyError(f"unregistered event handler: {handler_id}")
+        if callback is None:
+            raise ValueError("callback is required for legacy events")
         self._sequence += 1
         heapq.heappush(
             self._queue,
@@ -81,6 +109,7 @@ class EventQueue:
                 callback,
                 name,
                 metadata or EventMetadata(),
+                handler_id,
             ),
         )
 
@@ -108,6 +137,42 @@ class EventQueue:
     def history_declarations(self) -> tuple[EventDeclaration, ...]:
         """Return dispatched event declarations in deterministic order."""
         return tuple(event.declaration() for event in self._history)
+
+    def restore_declarations(
+        self,
+        pending: tuple[EventDeclaration, ...],
+        history: tuple[EventDeclaration, ...] = (),
+    ) -> None:
+        """Restore declarations using registered stable handlers."""
+        self._queue.clear()
+        self._history.clear()
+        self._sequence = 0
+
+        def resolve(event: EventDeclaration) -> Callable:
+            if event.handler_id is None:
+                raise ValueError(
+                    f"cannot restore legacy event without handler_id: {event.name!r}"
+                )
+            callback = self._handlers.get(event.handler_id)
+            if callback is None:
+                raise KeyError(f"unregistered event handler: {event.handler_id}")
+            return callback
+
+        for event in history:
+            restored = ScheduledEvent(
+                event.day, event.sequence, resolve(event), event.name,
+                event.metadata, event.handler_id,
+            )
+            self._history.append(restored)
+            self._sequence = max(self._sequence, event.sequence)
+
+        for event in pending:
+            restored = ScheduledEvent(
+                event.day, event.sequence, resolve(event), event.name,
+                event.metadata, event.handler_id,
+            )
+            heapq.heappush(self._queue, restored)
+            self._sequence = max(self._sequence, event.sequence)
 
     def __len__(self) -> int:
         return len(self._queue)
