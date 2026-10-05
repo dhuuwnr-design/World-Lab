@@ -50,3 +50,19 @@ def test_annual_social_learning_is_gradual():
     assert after > before
     assert after < 1.0
     assert "social-learning:2027:" + str(person_id) in world.people[person_id].agent.memory.recent_events
+
+
+def test_people_can_have_multiple_active_institution_affiliations():
+    world = World(seed=25)
+    generate_population(world, 60)
+    multi = [
+        person for person in world.people.values()
+        if len(person.affiliation_ids) >= 2
+    ]
+    assert multi
+    person = multi[0]
+    sectors = {
+        world.organizations[world.affiliations[aid].organization_id].sector
+        for aid in person.affiliation_ids
+    }
+    assert len(sectors) >= 2

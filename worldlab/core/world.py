@@ -6,7 +6,7 @@ from typing import Dict, Optional
 
 from .agents import DecisionContext, IndividualAgent
 from .demography import DemographicProfile, advance_demography
-from .entities import Household, Location, Organization, Person
+from .entities import Affiliation, Household, Location, Organization, Person
 from .events import EventQueue
 from .lifecycle import advance_life_course
 from .social import Relationship, SocialContext, apply_social_experience, weighted_social_aggregate

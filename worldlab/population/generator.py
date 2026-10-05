@@ -4,7 +4,7 @@ import random
 from typing import Union
 
 from worldlab.core.agents import IndividualAgent
-from worldlab.core.entities import Household, Person
+from worldlab.core.entities import Affiliation, Household, Person
 from worldlab.core.social import Relationship, SocialContext, SocialState, clamp
 from worldlab.core.world import World
 from .size import PopulationSize
