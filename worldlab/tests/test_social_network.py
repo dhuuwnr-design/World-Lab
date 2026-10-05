@@ -79,7 +79,7 @@ def test_affiliations_survive_state_round_trip():
 def test_affiliations_follow_life_stage():
     world = World(seed=27)
     generate_population(world, 80)
-    person = next(p for p in world.people.values() if p.age == 22)
+    person = next(p for p in world.people.values() if 18 <= p.age <= 22)
     education_ids = [aid for aid in person.affiliation_ids if world.organizations[world.affiliations[aid].organization_id].sector == "education"]
     assert education_ids
     person.age = 23
