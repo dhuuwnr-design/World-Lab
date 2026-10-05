@@ -46,6 +46,18 @@ class EntitySnapshot:
         if not self.entity_id.strip() or not self.entity_type.strip(): raise ContractError("entity_id and entity_type must not be empty")
 
 @dataclass(frozen=True)
+class CausalTraceSnapshot:
+    trace_id: str
+    source_id: str
+    target_id: str
+    mechanism_id: str
+    day: int
+    strength: float | None = None
+    evidence_references: tuple[str, ...] = ()
+    uncertainty: Mapping[str, Any] = field(default_factory=dict)
+    parent_trace_id: str | None = None
+
+@dataclass(frozen=True)
 class IndividualAgentSnapshot:
     agent_id: str
     person_id: int
@@ -56,12 +68,12 @@ class IndividualAgentSnapshot:
     recent_events: tuple[str, ...] = ()
     decision_history: tuple[Mapping[str, Any], ...] = ()
     current_perception: Mapping[str, float] = field(default_factory=dict)
+    causal_lineage: tuple[CausalTraceSnapshot, ...] = ()
     def __post_init__(self):
         if not self.agent_id.strip() or self.person_id < 0:
             raise ContractError("agent_id and person_id must be valid")
         for value in (self.risk_tolerance, self.social_sensitivity):
-            if not 0.0 <= value <= 1.0:
-                raise ContractError("agent traits must be between 0 and 1")
+            if not 0.0 <= value <= 1.0: raise ContractError("agent traits must be between 0 and 1")
 
 @dataclass(frozen=True)
 class EventRecord:
@@ -75,6 +87,16 @@ class EventRecord:
     def __post_init__(self):
         if not self.event_id.strip() or not self.event_type.strip(): raise ContractError("event_id and event_type must not be empty")
         if self.simulation_time < 0: raise ContractError("simulation_time must be non-negative")
+
+@dataclass(frozen=True)
+class ObservatorySnapshot:
+    world: WorldSnapshot
+    selected_entity_id: str | None = None
+    entity_count: int = 0
+    causal_trace_count: int = 0
+    available_views: tuple[str, ...] = ("civilization", "people", "causality", "scenarios")
+    def __post_init__(self):
+        if self.entity_count < 0 or self.causal_trace_count < 0: raise ContractError("counts must be non-negative")
 
 @dataclass(frozen=True)
 class ScenarioDefinition:
@@ -148,12 +170,11 @@ def to_dict(contract: Any) -> dict[str, Any]:
 
 def _restore(value: Any, annotation: Any) -> Any:
     if value is None: return None
-    origin, args = get_origin(annotation), get_args(annotation)
+    origin,args=get_origin(annotation),get_args(annotation)
     if origin is tuple:
         if len(args)==2 and args[1] is Ellipsis: return tuple(_restore(x,args[0]) for x in value)
         return tuple(_restore(x,t) for x,t in zip(value,args)) if args else tuple(value)
-    if origin is list:
-        return [_restore(x,args[0] if args else Any) for x in value]
+    if origin is list: return [_restore(x,args[0] if args else Any) for x in value]
     if origin is dict:
         kt,vt=args if len(args)==2 else (Any,Any)
         return {_restore(k,kt):_restore(v,vt) for k,v in value.items()}
@@ -162,7 +183,7 @@ def _restore(value: Any, annotation: Any) -> Any:
         return annotation(**{n:_restore(v,hints.get(n,Any)) for n,v in value.items()})
     return value
 
-def from_dict(contract_type: type[Any], data: Mapping[str, Any]) -> Any:
-    if not hasattr(contract_type, "__dataclass_fields__"): raise TypeError("contract_type must be a dataclass type")
+def from_dict(contract_type:type[Any],data:Mapping[str,Any])->Any:
+    if not hasattr(contract_type,"__dataclass_fields__"): raise TypeError("contract_type must be a dataclass type")
     hints=get_type_hints(contract_type)
     return contract_type(**{n:_restore(v,hints.get(n,Any)) for n,v in data.items()})
