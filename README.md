@@ -16,49 +16,24 @@ This is a simulation/research system, not a claim that the real world can be rep
 
 - **World state** — people, households, organizations, locations and shared economic/social state.
 - **Time engine** — deterministic event scheduling and autonomous daily/monthly/yearly progression.
-- **Population layer** — statistically grounded synthetic population generation.
-- **Sector layer** — education, health, finance, industry, retail, transport, housing, agriculture, energy, government and media.
+- **Population layer** — statistically grounded synthetic populations with explicit representation weights.
+- **Demography** — parameter-driven fertility and mortality mechanics; real rates remain external calibration inputs.
+- **Social layer** — heterogeneous individual affective/social states, relationships and context variables; no country stereotype is hard-coded.
+- **Sector layer** — education, health, finance, industry, retail, transport, housing, agriculture, energy, government and media can mutate the same world.
 - **Experiment layer** — interventions and branching timelines.
 - **Calibration layer** — compare simulated aggregates with reference data.
 - **Validation layer** — regression tests and measurable acceptance criteria.
 
-AI/LLM components are optional higher-level decision and analysis layers. Routine simulation must not depend on an LLM call for every person or every tick.
+AI/LLM components are optional higher-level analysis tools. Routine simulation must remain deterministic and reproducible without an LLM call for every person or tick.
 
 ## Current milestone
 
-### v0.3 — Calibration-ready kernel
+**v0.6 — Human/social state foundation**
 
-The immediate objective is to build a small but scientifically testable regional world rather than pretending a tiny random population represents Earth.
+The kernel now has demographic lifecycle mechanics, representative-population weights, deterministic event-boundary ordering, and heterogeneous social/affective state. Real-world calibration data is still external and must be sourced and documented before results are described as realistic.
 
-Acceptance criteria will include:
-
-1. reproducible population generation from explicit distributions;
-2. correlated household/person attributes rather than independent random fields;
-3. geographic assignment;
-4. connected sector flows;
-5. intervention propagation;
-6. deterministic replay from a seed;
-7. calibration error metrics;
-8. tests that fail when core invariants are violated.
-
-## Repository layout
-
-```
-worldlab/
-  core/          # world state and time engine
-  population/    # synthetic population generation
-  sectors/       # connected civilization sectors
-  experiments/   # interventions and timeline branching
-  calibration/   # reference data and validation metrics
-  tests/         # deterministic regression tests
-scripts/         # Colab/local entry points
-config/          # explicit simulation configuration
-```
-
-## Status
-
-Early research implementation. Results are experimental and must be calibrated against external reference data before being treated as realistic.
+See WORLD_LAB_CHECKPOINT.md for the durable project state and next research target.
 
 ## Development environment
 
-The first development workflow is Google Colab/mobile-friendly Python, with GitLab as the source of truth.
+The first development workflow is Google Colab/mobile-friendly Python, with GitHub as the current mirrored source of truth.
